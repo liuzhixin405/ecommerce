@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>电商系统</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <header>
+        <nav>
+            <div class="nav-container">
+                <h1>电商系统</h1>
+                <div class="nav-links">
+                    <button id="loginBtn" class="nav-btn">登录</button>
+                    <button id="registerBtn" class="nav-btn">注册</button>
+                    <button id="logoutBtn" class="nav-btn" style="display: none;">退出</button>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main>
+        <!-- 登录表单 -->
+        <div id="loginForm" class="form-container" style="display: none;">
+            <h2>用户登录</h2>
+            <form id="loginFormElement">
+                <div class="form-group">
+                    <label for="loginEmail">邮箱:</label>
+                    <input type="email" id="loginEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">密码:</label>
+                    <input type="password" id="loginPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">登录</button>
+            </form>
+        </div>
+
+        <!-- 注册表单 -->
+        <div id="registerForm" class="form-container" style="display: none;">
+            <h2>用户注册</h2>
+            <form id="registerFormElement">
+                <div class="form-group">
+                    <label for="registerUsername">用户名:</label>
+                    <input type="text" id="registerUsername" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerEmail">邮箱:</label>
+                    <input type="email" id="registerEmail" required>
+                </div>
+                <div class="form-group">
+                    <label for="registerPassword">密码:</label>
+                    <input type="password" id="registerPassword" required>
+                </div>
+                <button type="submit" class="btn-primary">注册</button>
+            </form>
+        </div>
+
+        <!-- 产品列表 -->
+        <div id="productsSection" class="section" style="display: none;">
+            <h2>产品列表</h2>
+            <div id="productsList" class="products-grid"></div>
+        </div>
+
+        <!-- 购物车 -->
+        <div id="cartSection" class="section" style="display: none;">
+            <h2>购物车</h2>
+            <div id="cartItems" class="cart-items"></div>
+            <div class="cart-total">
+                <strong>总计: ¥<span id="cartTotal">0.00</span></strong>
+                <button id="checkoutBtn" class="btn-primary">结算</button>
+            </div>
+        </div>
+
+        <!-- 订单列表 -->
+        <div id="ordersSection" class="section" style="display: none;">
+            <h2>我的订单</h2>
+            <div id="ordersList" class="orders-list"></div>
+        </div>
+
+        <!-- 主页面 -->
+        <div id="mainContent" class="main-content">
+            <h2>欢迎使用电商系统</h2>
+            <p>请登录或注册以开始购物</p>
+            <div class="feature-grid">
+                <div class="feature-card">
+                    <h3>产品浏览</h3>
+                    <p>浏览各种产品，找到您需要的商品</p>
+                </div>
+                <div class="feature-card">
+                    <h3>安全支付</h3>
+                    <p>多种支付方式，安全可靠</p>
+                </div>
+                <div class="feature-card">
+                    <h3>快速配送</h3>
+                    <p>快速配送，及时送达</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="message" class="message" style="display: none;"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
