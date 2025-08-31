@@ -3,33 +3,36 @@ export enum PaymentState {
   Processing = 'Processing',
   Completed = 'Completed',
   Failed = 'Failed',
-  Cancelled = 'Cancelled'
+  Cancelled = 'Cancelled',
+  Refunded = 'Refunded'
 }
 
 export enum RefundStatus {
   Pending = 'Pending',
-  Approved = 'Approved',
-  Rejected = 'Rejected',
-  Completed = 'Completed'
+  Processing = 'Processing',
+  Completed = 'Completed',
+  Failed = 'Failed',
+  Cancelled = 'Cancelled'
 }
 
 export enum PaymentMethod {
   CreditCard = 'CreditCard',
   DebitCard = 'DebitCard',
   PayPal = 'PayPal',
+  Alipay = 'Alipay',
+  WeChatPay = 'WeChatPay',
   BankTransfer = 'BankTransfer',
-  Cash = 'Cash'
+  Cash = 'Cash',
+  Other = 'Other'
 }
 
 export interface PaymentRequest {
   orderId: string;
+  paymentMethod: string;
   amount: number;
   currency: string;
-  paymentMethod: PaymentMethod;
-  customerEmail?: string;
-  customerName?: string;
-  billingAddress?: string;
-  additionalData?: Record<string, string>;
+  description: string;
+  metadata: Record<string, string>;
 }
 
 export interface PaymentResult {
@@ -39,7 +42,7 @@ export interface PaymentResult {
   status: PaymentStatus;
   message: string;
   processedAt: Date;
-  additionalData?: Record<string, string>;
+  additionalData: Record<string, string>;
 }
 
 export interface PaymentStatus {
@@ -48,17 +51,16 @@ export interface PaymentStatus {
   state: PaymentState;
   amount: number;
   currency: string;
-  paymentMethod: PaymentMethod;
+  paymentMethod: string;
   createdAt: Date;
   processedAt?: Date;
-  message?: string;
+  message: string;
 }
 
 export interface PaymentValidationResult {
   isValid: boolean;
   paymentId: string;
-  orderId: string;
-  state: PaymentState;
+  status: PaymentStatus;
   message: string;
   validatedAt: Date;
 }
@@ -68,14 +70,13 @@ export interface RefundRequest {
   paymentId: string;
   amount: number;
   reason: string;
-  customerEmail?: string;
+  description: string;
 }
 
 export interface RefundResult {
   success: boolean;
   refundId: string;
   paymentId: string;
-  orderId: string;
   amount: number;
   status: RefundStatus;
   message: string;

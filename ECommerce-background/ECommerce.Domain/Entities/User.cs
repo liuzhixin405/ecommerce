@@ -27,10 +27,10 @@ namespace ECommerce.Domain.Models
         public string LastName { get; set; } = string.Empty;
         
         [MaxLength(20)]
-        public string PhoneNumber { get; set; } = string.Empty;
+        public string? PhoneNumber { get; set; } = string.Empty;
         
         [MaxLength(200)]
-        public string Address { get; set; } = string.Empty;
+        public string? Address { get; set; } = string.Empty;
         
         public bool IsActive { get; set; } = true;
         

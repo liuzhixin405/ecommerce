@@ -22,8 +22,9 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
   const [inventoryInfo, setInventoryInfo] = useState<ProductInventoryInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [operationType, setOperationType] = useState<InventoryOperationType>(InventoryOperationType.StockAdjustment);
+  const [operationType, setOperationType] = useState<InventoryOperationType>(InventoryOperationType.Adjust);
   const [quantity, setQuantity] = useState<number>(0);
+  const [reason, setReason] = useState('');
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
@@ -51,6 +52,11 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
       return;
     }
 
+    if (!reason.trim()) {
+      toast.error('Please provide a reason for this operation');
+      return;
+    }
+
     setIsUpdating(true);
     
     try {
@@ -58,14 +64,16 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
         productId,
         quantity: Math.abs(quantity),
         operationType,
-        notes: notes || undefined
+        reason: reason.trim(),
+        notes: notes.trim()
       };
 
       const result = await inventoryService.batchUpdateInventory([update]);
       
-      if (result.success) {
+      if (result.overallSuccess) {
         toast.success('Inventory updated successfully!');
         setQuantity(0);
+        setReason('');
         setNotes('');
         onInventoryUpdate?.(result.results[0]);
         loadInventoryInfo(); // Refresh inventory info
@@ -82,18 +90,22 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
 
   const getOperationTypeLabel = (type: InventoryOperationType) => {
     switch (type) {
-      case InventoryOperationType.StockIn:
-        return 'Stock In (+ Add)';
-      case InventoryOperationType.StockOut:
-        return 'Stock Out (- Remove)';
-      case InventoryOperationType.StockAdjustment:
-        return 'Stock Adjustment';
-      case InventoryOperationType.StockLock:
-        return 'Stock Lock';
-      case InventoryOperationType.StockRelease:
-        return 'Stock Release';
-      case InventoryOperationType.StockReservation:
-        return 'Stock Reservation';
+      case InventoryOperationType.Add:
+        return '增加库存 (+ Add)';
+      case InventoryOperationType.Deduct:
+        return '扣减库存 (- Remove)';
+      case InventoryOperationType.Reserve:
+        return '预留库存 (Reserve)';
+      case InventoryOperationType.Release:
+        return '释放预留 (Release)';
+      case InventoryOperationType.Lock:
+        return '锁定库存 (Lock)';
+      case InventoryOperationType.Unlock:
+        return '解锁库存 (Unlock)';
+      case InventoryOperationType.Adjust:
+        return '调整库存 (Adjust)';
+      case InventoryOperationType.Set:
+        return '设置库存 (Set)';
       default:
         return type;
     }
@@ -101,18 +113,22 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
 
   const getOperationTypeIcon = (type: InventoryOperationType) => {
     switch (type) {
-      case InventoryOperationType.StockIn:
+      case InventoryOperationType.Add:
         return '📥';
-      case InventoryOperationType.StockOut:
+      case InventoryOperationType.Deduct:
         return '📤';
-      case InventoryOperationType.StockAdjustment:
-        return '⚖️';
-      case InventoryOperationType.StockLock:
-        return '🔒';
-      case InventoryOperationType.StockRelease:
-        return '🔓';
-      case InventoryOperationType.StockReservation:
+      case InventoryOperationType.Reserve:
         return '📋';
+      case InventoryOperationType.Release:
+        return '🔓';
+      case InventoryOperationType.Lock:
+        return '🔒';
+      case InventoryOperationType.Unlock:
+        return '🔓';
+      case InventoryOperationType.Adjust:
+        return '⚖️';
+      case InventoryOperationType.Set:
+        return '📊';
       default:
         return '📊';
     }
@@ -152,8 +168,8 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
       {/* Current Inventory Status */}
       <div className="grid grid-cols-2 gap-4 mb-6">
         <div className="bg-blue-50 p-4 rounded-lg">
-          <div className="text-2xl font-bold text-blue-600">{inventoryInfo.currentStock}</div>
-          <div className="text-sm text-blue-700">Current Stock</div>
+          <div className="text-2xl font-bold text-blue-600">{inventoryInfo.totalStock}</div>
+          <div className="text-sm text-blue-700">Total Stock</div>
         </div>
         <div className="bg-green-50 p-4 rounded-lg">
           <div className="text-2xl font-bold text-green-600">{inventoryInfo.availableStock}</div>
@@ -179,7 +195,7 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
             <span className="text-red-800 font-medium">Low Stock Warning</span>
           </div>
           <p className="text-red-700 text-sm mt-1">
-            Current stock ({inventoryInfo.currentStock}) is below the threshold ({inventoryInfo.lowStockThreshold})
+            Current stock ({inventoryInfo.totalStock}) is below the threshold ({inventoryInfo.lowStockThreshold})
           </p>
         </div>
       )}
@@ -205,7 +221,7 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
 
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">
-            Quantity
+            Quantity *
           </label>
           <input
             type="number"
@@ -217,10 +233,25 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
             required
           />
           <p className="text-xs text-gray-500 mt-1">
-            {operationType === InventoryOperationType.StockIn && 'Positive number to add stock'}
-            {operationType === InventoryOperationType.StockOut && 'Positive number to remove stock'}
-            {operationType === InventoryOperationType.StockAdjustment && 'Positive or negative number to adjust stock'}
+            {operationType === InventoryOperationType.Add && 'Positive number to add stock'}
+            {operationType === InventoryOperationType.Deduct && 'Positive number to remove stock'}
+            {operationType === InventoryOperationType.Adjust && 'Positive or negative number to adjust stock'}
+            {operationType === InventoryOperationType.Set && 'Set stock to exact number'}
           </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Reason *
+          </label>
+          <input
+            type="text"
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            placeholder="e.g., Stock adjustment, Inventory correction..."
+            required
+          />
         </div>
 
         <div>
@@ -238,7 +269,7 @@ const InventoryManager: React.FC<InventoryManagerProps> = ({
 
         <button
           type="submit"
-          disabled={isUpdating || quantity === 0}
+          disabled={isUpdating || quantity === 0 || !reason.trim()}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isUpdating ? (

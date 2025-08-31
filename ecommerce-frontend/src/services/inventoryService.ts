@@ -4,7 +4,8 @@ import {
   ProductInventoryInfo, 
   InventoryUpdate, 
   BatchInventoryUpdateResult,
-  InventoryOperationType 
+  InventoryUpdateRequest,
+  InventoryLockRequest
 } from '../interfaces/InventoryModels';
 import authService from './authService';
 
@@ -23,18 +24,11 @@ export class InventoryService {
   }
 
   public async checkStock(productId: string, quantity: number): Promise<InventoryCheckResult> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/inventory/check`, {
-      method: 'POST',
+    const response = await fetch(`${API_BASE_URL}/inventory/check/${productId}?quantity=${quantity}`, {
+      method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ productId, quantity }),
     });
 
     if (!response.ok) {
@@ -46,15 +40,9 @@ export class InventoryService {
   }
 
   public async getProductInventory(productId: string): Promise<ProductInventoryInfo> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
     const response = await fetch(`${API_BASE_URL}/inventory/info/${productId}`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -67,11 +55,18 @@ export class InventoryService {
     return await response.json();
   }
 
-  public async deductStock(productId: string, quantity: number): Promise<InventoryOperationResult> {
+  public async deductStock(productId: string, quantity: number, reason: string = '', notes: string = ''): Promise<InventoryOperationResult> {
     const token = authService.getToken();
     if (!token) {
       throw new Error('Authentication required');
     }
+
+    const request: InventoryUpdateRequest = {
+      productId,
+      quantity,
+      reason,
+      notes
+    };
 
     const response = await fetch(`${API_BASE_URL}/inventory/deduct`, {
       method: 'POST',
@@ -79,7 +74,7 @@ export class InventoryService {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ productId, quantity }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -90,11 +85,18 @@ export class InventoryService {
     return await response.json();
   }
 
-  public async restoreStock(productId: string, quantity: number): Promise<InventoryOperationResult> {
+  public async restoreStock(productId: string, quantity: number, reason: string = '', notes: string = ''): Promise<InventoryOperationResult> {
     const token = authService.getToken();
     if (!token) {
       throw new Error('Authentication required');
     }
+
+    const request: InventoryUpdateRequest = {
+      productId,
+      quantity,
+      reason,
+      notes
+    };
 
     const response = await fetch(`${API_BASE_URL}/inventory/restore`, {
       method: 'POST',
@@ -102,7 +104,7 @@ export class InventoryService {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ productId, quantity }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -113,11 +115,19 @@ export class InventoryService {
     return await response.json();
   }
 
-  public async lockStock(productId: string, quantity: number, orderId: string): Promise<InventoryOperationResult> {
+  public async lockStock(productId: string, quantity: number, orderId: string, reason: string = '', notes: string = ''): Promise<InventoryOperationResult> {
     const token = authService.getToken();
     if (!token) {
       throw new Error('Authentication required');
     }
+
+    const request: InventoryLockRequest = {
+      productId,
+      quantity,
+      orderId,
+      reason,
+      notes
+    };
 
     const response = await fetch(`${API_BASE_URL}/inventory/lock`, {
       method: 'POST',
@@ -125,7 +135,7 @@ export class InventoryService {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ productId, quantity, orderId }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -136,11 +146,19 @@ export class InventoryService {
     return await response.json();
   }
 
-  public async releaseLockedStock(productId: string, quantity: number, orderId: string): Promise<InventoryOperationResult> {
+  public async releaseLockedStock(productId: string, quantity: number, orderId: string, reason: string = '', notes: string = ''): Promise<InventoryOperationResult> {
     const token = authService.getToken();
     if (!token) {
       throw new Error('Authentication required');
     }
+
+    const request: InventoryLockRequest = {
+      productId,
+      quantity,
+      orderId,
+      reason,
+      notes
+    };
 
     const response = await fetch(`${API_BASE_URL}/inventory/release`, {
       method: 'POST',
@@ -148,7 +166,7 @@ export class InventoryService {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ productId, quantity, orderId }),
+      body: JSON.stringify(request),
     });
 
     if (!response.ok) {
@@ -171,7 +189,7 @@ export class InventoryService {
         'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ updates }),
+      body: JSON.stringify(updates),
     });
 
     if (!response.ok) {
@@ -182,16 +200,10 @@ export class InventoryService {
     return await response.json();
   }
 
-  public async getOperationTypes(): Promise<InventoryOperationType[]> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
+  public async getOperationTypes(): Promise<any[]> {
     const response = await fetch(`${API_BASE_URL}/inventory/operation-types`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -199,28 +211,6 @@ export class InventoryService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Failed to get operation types');
-    }
-
-    return await response.json();
-  }
-
-  public async getLowStockProducts(): Promise<ProductInventoryInfo[]> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/inventory/low-stock`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to get low stock products');
     }
 
     return await response.json();

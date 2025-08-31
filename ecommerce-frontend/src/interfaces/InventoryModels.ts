@@ -1,10 +1,12 @@
 export enum InventoryOperationType {
-  StockIn = 'StockIn',
-  StockOut = 'StockOut',
-  StockAdjustment = 'StockAdjustment',
-  StockLock = 'StockLock',
-  StockRelease = 'StockRelease',
-  StockReservation = 'StockReservation'
+  Add = 'Add',
+  Deduct = 'Deduct',
+  Reserve = 'Reserve',
+  Release = 'Release',
+  Lock = 'Lock',
+  Unlock = 'Unlock',
+  Adjust = 'Adjust',
+  Set = 'Set'
 }
 
 export interface InventoryCheckResult {
@@ -12,10 +14,8 @@ export interface InventoryCheckResult {
   productId: string;
   requestedQuantity: number;
   availableStock: number;
-  lockedStock: number;
   reservedStock: number;
   message: string;
-  checkedAt: Date;
 }
 
 export interface InventoryOperationResult {
@@ -24,40 +24,38 @@ export interface InventoryOperationResult {
   quantity: number;
   oldStock: number;
   newStock: number;
-  operationType: InventoryOperationType;
   message: string;
   operationTime: Date;
-  orderId?: string;
 }
 
 export interface ProductInventoryInfo {
   productId: string;
   productName: string;
-  currentStock: number;
-  lockedStock: number;
-  reservedStock: number;
+  totalStock: number;
   availableStock: number;
+  reservedStock: number;
+  lockedStock: number;
   lastUpdated: Date;
-  lowStockThreshold: number;
   isLowStock: boolean;
+  lowStockThreshold: number;
 }
 
 export interface InventoryUpdate {
   productId: string;
   quantity: number;
   operationType: InventoryOperationType;
+  reason: string;
   orderId?: string;
-  notes?: string;
+  notes: string;
 }
 
 export interface BatchInventoryUpdateResult {
-  success: boolean;
+  overallSuccess: boolean;
   totalOperations: number;
   successfulOperations: number;
   failedOperations: number;
   results: InventoryOperationResult[];
   message: string;
-  processedAt: Date;
 }
 
 export interface InventoryTransaction {
@@ -65,10 +63,26 @@ export interface InventoryTransaction {
   productId: string;
   operationType: InventoryOperationType;
   quantity: number;
-  oldStock: number;
-  newStock: number;
+  beforeStock: number;
+  afterStock: number;
   orderId?: string;
-  userId?: string;
-  notes?: string;
+  reason: string;
+  notes: string;
   createdAt: Date;
+  createdBy: string;
+}
+
+export interface InventoryUpdateRequest {
+  productId: string;
+  quantity: number;
+  reason: string;
+  notes: string;
+}
+
+export interface InventoryLockRequest {
+  productId: string;
+  quantity: number;
+  orderId: string;
+  reason: string;
+  notes: string;
 }

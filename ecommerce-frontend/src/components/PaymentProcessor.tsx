@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { PaymentRequest, PaymentResult, PaymentMethod } from '../interfaces/PaymentModels';
+import { PaymentRequest, PaymentResult } from '../interfaces/PaymentModels';
 import paymentService from '../services/paymentService';
 import { toast } from 'react-hot-toast';
 
@@ -12,20 +12,23 @@ interface PaymentProcessorProps {
   onCancel?: () => void;
 }
 
+interface PaymentMethodOption {
+  value: string;
+  name: string;
+  description: string;
+}
+
 const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
   orderId,
   amount,
-  currency = 'USD',
+  currency = 'CNY',
   onPaymentSuccess,
   onPaymentFailure,
   onCancel
 }) => {
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(PaymentMethod.CreditCard);
-  const [customerEmail, setCustomerEmail] = useState('');
-  const [customerName, setCustomerName] = useState('');
-  const [billingAddress, setBillingAddress] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<string>('CreditCard');
   const [isProcessing, setIsProcessing] = useState(false);
-  const [availableMethods, setAvailableMethods] = useState<PaymentMethod[]>([]);
+  const [availableMethods, setAvailableMethods] = useState<PaymentMethodOption[]>([]);
 
   useEffect(() => {
     loadPaymentMethods();
@@ -39,10 +42,13 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
       console.error('Failed to load payment methods:', error);
       // Fallback to default methods
       setAvailableMethods([
-        PaymentMethod.CreditCard,
-        PaymentMethod.DebitCard,
-        PaymentMethod.PayPal,
-        PaymentMethod.BankTransfer
+        { value: 'CreditCard', name: '信用卡', description: '使用信用卡支付' },
+        { value: 'DebitCard', name: '借记卡', description: '使用借记卡支付' },
+        { value: 'PayPal', name: 'PayPal', description: '使用PayPal账户支付' },
+        { value: 'Alipay', name: '支付宝', description: '使用支付宝支付' },
+        { value: 'WeChatPay', name: '微信支付', description: '使用微信支付' },
+        { value: 'BankTransfer', name: '银行转账', description: '银行转账支付' },
+        { value: 'Cash', name: '现金', description: '货到付款' }
       ]);
     }
   };
@@ -50,23 +56,16 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!customerEmail || !customerName) {
-      toast.error('Please fill in all required fields');
-      return;
-    }
-
     setIsProcessing(true);
     
     try {
       const paymentRequest: PaymentRequest = {
         orderId,
+        paymentMethod,
         amount,
         currency,
-        paymentMethod,
-        customerEmail,
-        customerName,
-        billingAddress: billingAddress || undefined,
-        additionalData: {
+        description: `Order payment for ${orderId}`,
+        metadata: {
           timestamp: new Date().toISOString(),
           source: 'frontend'
         }
@@ -90,36 +89,23 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
     }
   };
 
-  const getPaymentMethodIcon = (method: PaymentMethod) => {
+  const getPaymentMethodIcon = (method: string) => {
     switch (method) {
-      case PaymentMethod.CreditCard:
-      case PaymentMethod.DebitCard:
+      case 'CreditCard':
+      case 'DebitCard':
         return '💳';
-      case PaymentMethod.PayPal:
+      case 'PayPal':
         return '🔵';
-      case PaymentMethod.BankTransfer:
+      case 'Alipay':
+        return '🔵';
+      case 'WeChatPay':
+        return '🟢';
+      case 'BankTransfer':
         return '🏦';
-      case PaymentMethod.Cash:
+      case 'Cash':
         return '💵';
       default:
         return '💰';
-    }
-  };
-
-  const getPaymentMethodLabel = (method: PaymentMethod) => {
-    switch (method) {
-      case PaymentMethod.CreditCard:
-        return 'Credit Card';
-      case PaymentMethod.DebitCard:
-        return 'Debit Card';
-      case PaymentMethod.PayPal:
-        return 'PayPal';
-      case PaymentMethod.BankTransfer:
-        return 'Bank Transfer';
-      case PaymentMethod.Cash:
-        return 'Cash';
-      default:
-        return method;
     }
   };
 
@@ -149,62 +135,21 @@ const PaymentProcessor: React.FC<PaymentProcessorProps> = ({
           <div className="grid grid-cols-2 gap-2">
             {availableMethods.map((method) => (
               <button
-                key={method}
+                key={method.value}
                 type="button"
-                onClick={() => setPaymentMethod(method)}
+                onClick={() => setPaymentMethod(method.value)}
                 className={`p-3 border rounded-lg text-center transition-colors ${
-                  paymentMethod === method
+                  paymentMethod === method.value
                     ? 'border-blue-500 bg-blue-50 text-blue-700'
                     : 'border-gray-300 hover:border-gray-400'
                 }`}
+                title={method.description}
               >
-                <div className="text-xl mb-1">{getPaymentMethodIcon(method)}</div>
-                <div className="text-sm font-medium">{getPaymentMethodLabel(method)}</div>
+                <div className="text-xl mb-1">{getPaymentMethodIcon(method.value)}</div>
+                <div className="text-sm font-medium">{method.name}</div>
               </button>
             ))}
           </div>
-        </div>
-
-        {/* Customer Information */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Email Address *
-          </label>
-          <input
-            type="email"
-            value={customerEmail}
-            onChange={(e) => setCustomerEmail(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="your@email.com"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Full Name *
-          </label>
-          <input
-            type="text"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="John Doe"
-            required
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Billing Address
-          </label>
-          <textarea
-            value={billingAddress}
-            onChange={(e) => setBillingAddress(e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            placeholder="123 Main St, City, State, ZIP"
-            rows={3}
-          />
         </div>
 
         {/* Action Buttons */}

@@ -1,6 +1,6 @@
 import { LoginDto, LoginResponseDto, RefreshTokenDto, CreateUserDto } from '../interfaces/User';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7037/api';
 
 export class AuthService {
   private static instance: AuthService;
@@ -49,7 +49,8 @@ export class AuthService {
     });
 
     if (!response.ok) {
-      throw new Error('Login failed');
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'Login failed');
     }
 
     const data: LoginResponseDto = await response.json();

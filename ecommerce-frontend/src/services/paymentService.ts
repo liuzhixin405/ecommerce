@@ -4,8 +4,7 @@ import {
   PaymentValidationResult, 
   RefundRequest, 
   RefundResult, 
-  PaymentStatus,
-  PaymentMethod 
+  PaymentStatus
 } from '../interfaces/PaymentModels';
 import authService from './authService';
 
@@ -113,16 +112,10 @@ export class PaymentService {
     return await response.json();
   }
 
-  public async getPaymentMethods(): Promise<PaymentMethod[]> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
+  public async getPaymentMethods(): Promise<any[]> {
     const response = await fetch(`${API_BASE_URL}/payments/methods`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${token}`,
         'Content-Type': 'application/json',
       },
     });
@@ -130,28 +123,6 @@ export class PaymentService {
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       throw new Error(errorData.message || 'Failed to get payment methods');
-    }
-
-    return await response.json();
-  }
-
-  public async getPaymentHistory(orderId: string): Promise<PaymentStatus[]> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/payments/history/${orderId}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to get payment history');
     }
 
     return await response.json();
