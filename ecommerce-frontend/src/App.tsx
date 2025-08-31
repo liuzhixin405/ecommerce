@@ -1,0 +1,97 @@
+import React, { useState } from 'react';
+import Navbar from './components/Navbar';
+import ProductList from './pages/ProductList';
+import Cart from './components/Cart';
+import LoginModal from './components/LoginModal';
+import RegisterModal from './components/RegisterModal';
+import UserManagement from './components/UserManagement';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import './App.css';
+
+function AppContent() {
+  const [currentView, setCurrentView] = useState<'products' | 'cart' | 'users'>('products');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showRegisterModal, setShowRegisterModal] = useState(false);
+  const { isAuthenticated, user, logout } = useAuth();
+
+  const handleCartClick = () => {
+    setCurrentView('cart');
+  };
+
+  const handleLoginClick = () => {
+    if (isAuthenticated) {
+      logout();
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleUsersClick = () => {
+    setCurrentView('users');
+  };
+
+  const handleCheckout = () => {
+    // 这里可以添加结算逻辑
+    console.log('Checkout clicked');
+  };
+
+  return (
+    <div className="App">
+      <Navbar 
+        onCartClick={handleCartClick} 
+        onLoginClick={handleLoginClick}
+        onUsersClick={handleUsersClick}
+        isAuthenticated={isAuthenticated}
+        user={user}
+      />
+      <main className="min-h-screen bg-gray-50">
+        {currentView === 'products' ? (
+          <ProductList />
+        ) : currentView === 'cart' ? (
+          <div className="container mx-auto px-4 py-8">
+            <div className="flex items-center justify-between mb-6">
+              <h1 className="text-3xl font-bold text-gray-900">购物车</h1>
+              <button
+                onClick={() => setCurrentView('products')}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+              >
+                ← 继续购物
+              </button>
+            </div>
+            <Cart onCheckout={handleCheckout} />
+          </div>
+        ) : (
+          <UserManagement />
+        )}
+      </main>
+      
+      <LoginModal 
+        isOpen={showLoginModal} 
+        onClose={() => setShowLoginModal(false)}
+        onSwitchToRegister={() => {
+          setShowLoginModal(false);
+          setShowRegisterModal(true);
+        }}
+      />
+      
+      <RegisterModal 
+        isOpen={showRegisterModal} 
+        onClose={() => setShowRegisterModal(false)}
+        onSwitchToLogin={() => {
+          setShowRegisterModal(false);
+          setShowLoginModal(true);
+        }}
+      />
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+export default App;

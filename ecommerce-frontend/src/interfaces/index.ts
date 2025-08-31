@@ -1,0 +1,92 @@
+export interface Product {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  imageUrl: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface User {
+  id: string;
+  userName: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  address?: string;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface OrderItem {
+  id: string;
+  orderId: string;
+  productId: string;
+  product: Product;
+  quantity: number;
+  price: number;
+}
+
+export interface Order {
+  id: string;
+  userId: string;
+  user: User;
+  items: OrderItem[];
+  totalAmount: number;
+  status: 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
+  shippingAddress: string;
+  shippingPhone: string;
+  shippingName: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductDto {
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  imageUrl: string;
+}
+
+export interface CreateOrderDto {
+  userId: string;
+  items: {
+    productId: string;
+    quantity: number;
+  }[];
+  shippingAddress: string;
+  shippingPhone: string;
+  shippingName: string;
+}
+
+export interface UpdateOrderStatusDto {
+  status: 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
+}
+
+export interface LoginDto {
+  email: string;
+  password: string;
+}
+
+export interface CreateUserDto {
+  userName: string;
+  email: string;
+  password: string;
+  firstName: string;
+  lastName: string;
+  phone?: string;
+  address?: string;
+}
+
+export interface CartItem {
+  product: Product;
+  quantity: number;
+}
