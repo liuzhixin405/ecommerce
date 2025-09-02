@@ -157,6 +157,7 @@ namespace ECommerce.Application.Services
             if (order == null)
                 throw new ArgumentException($"Order with id {id} not found");
 
+            var oldStatus = order.Status;
             order.Status = updateOrderStatusDto.Status;
             order.UpdatedAt = DateTime.UtcNow;
 
@@ -168,6 +169,17 @@ namespace ECommerce.Application.Services
 
             var updatedOrder = await _orderRepository.UpdateAsync(order);
             _logger.LogInformation("Updated order status: {OrderId} to {Status}", id, updateOrderStatusDto.Status);
+
+            // 发布订单状态变更事件
+            try
+            {
+                var statusChangedEvent = new OrderStatusChangedEvent(order.Id, order.UserId, oldStatus, order.Status);
+                await _eventBus.PublishAsync(statusChangedEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to publish order status changed event for order {OrderId}", order.Id);
+            }
 
             return MapToDto(updatedOrder);
         }

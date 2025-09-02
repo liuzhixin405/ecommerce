@@ -253,6 +253,25 @@ namespace ECommerce.Application.Services
                 _logger.LogInformation("Stock restored successfully for product: {ProductId}, Old: {Old}, New: {New}, Restored: {Restored}", 
                     productId, oldStock, product.Stock, quantity);
 
+                // 发布库存更新事件（Add）
+                try
+                {
+                    var inventoryUpdatedEvent = new InventoryUpdatedEvent(
+                        productId,
+                        product.Name,
+                        oldStock,
+                        product.Stock,
+                        InventoryOperationType.Add,
+                        "Stock restoration",
+                        Guid.Empty);
+
+                    await _eventBus.PublishAsync(inventoryUpdatedEvent);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to publish inventory updated event (Add) for product {ProductId}", productId);
+                }
+
                 return result;
             }
             catch (Exception ex)
@@ -339,6 +358,25 @@ namespace ECommerce.Application.Services
                 _logger.LogInformation("Stock locked successfully for product: {ProductId}, Order: {OrderId}, Locked: {Locked}", 
                     productId, orderId, _lockedStock[productId]);
 
+                // 发布库存更新事件（Lock）
+                try
+                {
+                    var inventoryUpdatedEvent = new InventoryUpdatedEvent(
+                        productId,
+                        product.Name,
+                        product.Stock, // 锁定前后实际库存不变
+                        product.Stock,
+                        InventoryOperationType.Lock,
+                        "Stock locking for order",
+                        orderId);
+
+                    await _eventBus.PublishAsync(inventoryUpdatedEvent);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to publish inventory updated event (Lock) for product {ProductId}", productId);
+                }
+
                 return result;
             }
             catch (Exception ex)
@@ -408,6 +446,25 @@ namespace ECommerce.Application.Services
 
                 _logger.LogInformation("Locked stock released successfully for product: {ProductId}, Order: {OrderId}, Remaining locked: {Remaining}", 
                     productId, orderId, _lockedStock[productId]);
+
+                // 发布库存更新事件（Unlock）
+                try
+                {
+                    var inventoryUpdatedEvent = new InventoryUpdatedEvent(
+                        productId,
+                        string.Empty,
+                        0,
+                        0,
+                        InventoryOperationType.Unlock,
+                        "Stock unlocking for order",
+                        orderId);
+
+                    await _eventBus.PublishAsync(inventoryUpdatedEvent);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to publish inventory updated event (Unlock) for product {ProductId}", productId);
+                }
 
                 return result;
             }
