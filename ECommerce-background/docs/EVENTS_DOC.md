@@ -74,7 +74,7 @@
   - 方法：`ProcessPaymentAsync`（支付失败时）
   - 代码：
     ```
-    var paymentFailedEvent = new PaymentFailedEvent(paymentResult.PaymentId \?\? string.Empty, order.Id, order.UserId, paymentDto.Amount, paymentDto.PaymentMethod, paymentResult.Message);
+    var paymentFailedEvent = new PaymentFailedEvent(paymentResult.PaymentId ?? string.Empty, order.Id, order.UserId, paymentDto.Amount, paymentDto.PaymentMethod, paymentResult.Message);
     await _eventBus.PublishAsync(paymentFailedEvent);
     ```
 - 订阅（Subscriber）
@@ -94,14 +94,14 @@
   - 文件：`ECommerce.Application/EventHandlers/OrderPaidEventHandler.cs`
   - 行为：更新支付/销售统计；发送支付成功通知；清理订单缓存
 
-- ### InventoryUpdatedEvent
+### InventoryUpdatedEvent
 - 发布（Publisher）
   - 文件：`ECommerce.Application/Services/InventoryService.cs`
   - 方法：
     - `DeductStockAsync`（扣减后发布）
-    - `RestoreStockAsync`（已实现：恢复后发布，OperationType.Add）
-    - `LockStockAsync`（已实现：锁定后发布，OperationType.Lock，库存数不变）
-    - `ReleaseLockedStockAsync`（已实现：解锁后发布，OperationType.Unlock，库存数不变）
+    - `RestoreStockAsync`（恢复后发布，OperationType.Add）
+    - `LockStockAsync`（锁定后发布，OperationType.Lock，库存数不变）
+    - `ReleaseLockedStockAsync`（解锁后发布，OperationType.Unlock，库存数不变）
   - 代码示例（扣减）：
     ```
     var inventoryUpdatedEvent = new InventoryUpdatedEvent(productId, product.Name, oldStock, product.Stock, InventoryOperationType.Deduct, "Stock deduction", Guid.Empty);
@@ -124,10 +124,10 @@
   - 文件：`ECommerce.Application/EventHandlers/OrderCancelledEventHandler.cs`
   - 行为：更新取消统计；发送取消通知；清理订单缓存
 
-- ### OrderStatusChangedEvent
+### OrderStatusChangedEvent
 - 发布（Publisher）
   - 文件：`ECommerce.Application/Services/OrderService.cs`
-  - 方法：`UpdateOrderStatusAsync`（已实现：更新成功后发布）
+  - 方法：`UpdateOrderStatusAsync`（更新成功后发布）
   - 代码：
     ```
     var statusChangedEvent = new OrderStatusChangedEvent(order.Id, order.UserId, oldStatus, order.Status);
@@ -159,8 +159,7 @@
 
 ---
 
-## 待补充发布点（建议）
-- 在 `OrderService.UpdateOrderStatusAsync` 成功更新后统一发布 `OrderStatusChangedEvent`，保证状态流转都有事件记录与订阅端联动。
-- 在 `InventoryService` 的 `RestoreStockAsync`、`LockStockAsync`、`ReleaseLockedStockAsync` 成功后发布 `InventoryUpdatedEvent`（OperationType 对应 `Add/Lock/Unlock`），完善库存事件闭环。
+## 备注
+- 视业务需要，可以进一步拆分/合并事件；保持 Handler 单一职责，减少分支逻辑。
 
 
