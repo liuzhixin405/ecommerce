@@ -1,6 +1,7 @@
 using ECommerce.Core.EventBus;
 using ECommerce.Domain.Events;
 using ECommerce.Domain.Entities;
+using ECommerce.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Application.EventHandlers
@@ -11,10 +12,17 @@ namespace ECommerce.Application.EventHandlers
     public class OrderStatusChangedEventHandler : IEventHandler<OrderStatusChangedEvent>
     {
         private readonly ILogger<OrderStatusChangedEventHandler> _logger;
+        private readonly INotificationService _notificationService;
+        private readonly ICacheService _cacheService;
 
-        public OrderStatusChangedEventHandler(ILogger<OrderStatusChangedEventHandler> logger)
+        public OrderStatusChangedEventHandler(
+            ILogger<OrderStatusChangedEventHandler> logger,
+            INotificationService notificationService,
+            ICacheService cacheService)
         {
             _logger = logger;
+            _notificationService = notificationService;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> HandleAsync(OrderStatusChangedEvent domainEvent, CancellationToken cancellationToken = default)
@@ -67,11 +75,13 @@ namespace ECommerce.Application.EventHandlers
 
             // 3. 可以在这里添加其他核心业务逻辑
             // 比如：更新库存、发送通知等
-            
-            // 4. 模拟异步处理
-            await Task.Delay(50, cancellationToken);
-            
-            _logger.LogInformation("Order status change processing completed for order {OrderId}", domainEvent.OrderId);
+            await _notificationService.SendOrderStatusNotificationAsync(domainEvent.OrderId.ToString(), domainEvent.UserId.ToString(), domainEvent.NewStatus.ToString());
+
+            // 4) 失效订单相关缓存
+            await _cacheService.RemoveByPatternAsync($"order:{domainEvent.OrderId}");
+            await _cacheService.RemoveByPatternAsync($"orders:user:{domainEvent.UserId}");
+
+            _logger.LogInformation("Order status change handled for order {OrderId}", domainEvent.OrderId);
         }
     }
 }

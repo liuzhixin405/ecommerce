@@ -10,6 +10,7 @@ using ECommerce.API.Extensions;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using ECommerce.API.BackgroundServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -71,14 +72,12 @@ builder.Services.AddScoped<IOrderService, OrderService>();
 builder.Services.AddScoped<IPaymentService, DefaultPaymentService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 
-// Add Infrastructure Services (简化版本，只保留核心功能)
+// Add Infrastructure Services
 builder.Services.AddScoped<IEmailService, DefaultEmailService>();
 builder.Services.AddScoped<ICacheService, DefaultCacheService>();
+builder.Services.AddScoped<INotificationService, DefaultNotificationService>();
+builder.Services.AddScoped<IStatisticsService, DefaultStatisticsService>();
 builder.Services.AddScoped<IJwtService, JwtService>();
-
-// Add Outbox Service for Event Persistence
-// builder.Services.AddScoped<IOutboxService, OutboxService>();
-// builder.Services.AddHostedService<OutboxProcessorService>();
 
 // Add Event Bus Services
 builder.Services.AddRabbitMQEventBus(builder.Configuration);
@@ -93,6 +92,7 @@ builder.Services.AddScoped<PaymentProcessedEventHandler>();
 builder.Services.AddScoped<UserRegisteredEventHandler>();
 
 builder.Services.AddHostedService<EventBusStartupService>();
+builder.Services.AddHostedService<OrderExpirationService>();
 
 var app = builder.Build();
 

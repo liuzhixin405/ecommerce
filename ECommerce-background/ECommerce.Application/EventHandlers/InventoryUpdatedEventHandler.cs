@@ -1,5 +1,7 @@
 using ECommerce.Core.EventBus;
 using ECommerce.Domain.Events;
+using ECommerce.Domain.Interfaces;
+using ECommerce.Domain.Models;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Application.EventHandlers
@@ -10,10 +12,23 @@ namespace ECommerce.Application.EventHandlers
     public class InventoryUpdatedEventHandler : IEventHandler<InventoryUpdatedEvent>
     {
         private readonly ILogger<InventoryUpdatedEventHandler> _logger;
+        private readonly IProductRepository _productRepository;
+        private readonly ICacheService _cacheService;
+        private readonly INotificationService _notificationService;
+        private readonly IStatisticsService _statisticsService;
 
-        public InventoryUpdatedEventHandler(ILogger<InventoryUpdatedEventHandler> logger)
+        public InventoryUpdatedEventHandler(
+            ILogger<InventoryUpdatedEventHandler> logger,
+            IProductRepository productRepository,
+            ICacheService cacheService,
+            INotificationService notificationService,
+            IStatisticsService statisticsService)
         {
             _logger = logger;
+            _productRepository = productRepository;
+            _cacheService = cacheService;
+            _notificationService = notificationService;
+            _statisticsService = statisticsService;
         }
 
         public async Task<bool> HandleAsync(InventoryUpdatedEvent domainEvent, CancellationToken cancellationToken = default)
@@ -40,24 +55,50 @@ namespace ECommerce.Application.EventHandlers
         /// </summary>
         private async Task ProcessInventoryUpdateAsync(InventoryUpdatedEvent domainEvent, CancellationToken cancellationToken)
         {
-            // 1. 记录库存更新日志
-            _logger.LogInformation("Product {ProductId} inventory updated from {OldStock} to {NewStock} at {Timestamp}", 
-                domainEvent.ProductId, domainEvent.OldStock, domainEvent.NewStock, domainEvent.OccurredOn);
-
-            // 2. 检查低库存警告
-            if (domainEvent.NewStock <= 10)
+            // 1) 同步产品最新库存到读模型（Product.Stock 已由服务侧持久化，这里确保读侧一致并更新时间）
+            var product = await _productRepository.GetByIdAsync(domainEvent.ProductId);
+            if (product != null)
             {
-                _logger.LogWarning("Low stock alert: Product {ProductId} has only {Stock} units remaining", 
-                    domainEvent.ProductId, domainEvent.NewStock);
+                var originalUpdatedAt = product.UpdatedAt;
+                product.Stock = domainEvent.NewStock;
+                product.UpdatedAt = DateTime.UtcNow;
+                await _productRepository.UpdateAsync(product);
+                _logger.LogInformation("Synchronized product stock for {ProductId}: {Old} -> {New}", domainEvent.ProductId, domainEvent.OldStock, domainEvent.NewStock);
             }
 
-            // 3. 可以在这里添加其他核心业务逻辑
-            // 比如：更新产品状态、触发补货流程等
-            
-            // 4. 模拟异步处理
-            await Task.Delay(50, cancellationToken);
-            
-            _logger.LogInformation("Inventory update processing completed for product {ProductId}", domainEvent.ProductId);
+            // 2) 更新统计
+            await _statisticsService.UpdateInventoryStatisticsAsync(domainEvent);
+
+            // 3) 低库存与操作类型通知
+            if (domainEvent.NewStock <= 10)
+            {
+                await _notificationService.SendLowStockNotificationAsync(domainEvent);
+            }
+
+            switch (domainEvent.OperationType)
+            {
+                case InventoryOperationType.Deduct:
+                    await _notificationService.SendInventoryOutNotificationAsync(domainEvent);
+                    break;
+                case InventoryOperationType.Add:
+                    await _notificationService.SendInventoryInNotificationAsync(domainEvent);
+                    break;
+                case InventoryOperationType.Lock:
+                    await _notificationService.SendInventoryLockNotificationAsync(domainEvent);
+                    break;
+                case InventoryOperationType.Unlock:
+                    // 可按需发送解锁通知
+                    break;
+                default:
+                    await _notificationService.SendInventoryChangeNotificationAsync(domainEvent);
+                    break;
+            }
+
+            // 4) 失效相关缓存
+            var cacheKeyPrefix = $"product:{domainEvent.ProductId}";
+            await _cacheService.RemoveByPatternAsync(cacheKeyPrefix);
+
+            _logger.LogInformation("Inventory update handled for product {ProductId}", domainEvent.ProductId);
         }
     }
 }

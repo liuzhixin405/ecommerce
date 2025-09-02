@@ -1,5 +1,6 @@
 using ECommerce.Core.EventBus;
 using ECommerce.Domain.Events;
+using ECommerce.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Application.EventHandlers
@@ -10,10 +11,20 @@ namespace ECommerce.Application.EventHandlers
     public class OrderPaidEventHandler : IEventHandler<OrderPaidEvent>
     {
         private readonly ILogger<OrderPaidEventHandler> _logger;
+        private readonly IStatisticsService _statisticsService;
+        private readonly INotificationService _notificationService;
+        private readonly ICacheService _cacheService;
 
-        public OrderPaidEventHandler(ILogger<OrderPaidEventHandler> logger)
+        public OrderPaidEventHandler(
+            ILogger<OrderPaidEventHandler> logger,
+            IStatisticsService statisticsService,
+            INotificationService notificationService,
+            ICacheService cacheService)
         {
             _logger = logger;
+            _statisticsService = statisticsService;
+            _notificationService = notificationService;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> HandleAsync(OrderPaidEvent domainEvent, CancellationToken cancellationToken = default)
@@ -40,17 +51,22 @@ namespace ECommerce.Application.EventHandlers
         /// </summary>
         private async Task ProcessOrderPaymentAsync(OrderPaidEvent domainEvent, CancellationToken cancellationToken)
         {
-            // 1. 记录订单支付日志
-            _logger.LogInformation("Order {OrderId} paid with amount {Amount} at {Timestamp}", 
-                domainEvent.OrderId, domainEvent.Amount, domainEvent.OccurredOn);
+            // 1) 更新统计（支付/销售）
+            await _statisticsService.UpdatePaymentStatisticsAsync(domainEvent);
+            await _statisticsService.UpdateSalesStatisticsAsync(domainEvent);
 
-            // 2. 可以在这里添加其他核心业务逻辑
-            // 比如：更新订单状态、触发发货流程等
-            
-            // 3. 模拟异步处理
-            await Task.Delay(50, cancellationToken);
-            
-            _logger.LogInformation("Order payment processing completed for order {OrderId}", domainEvent.OrderId);
+            // 2) 发送支付成功通知
+            await _notificationService.SendPaymentNotificationAsync(new PaymentProcessedEvent(
+                domainEvent.PaymentId,
+                domainEvent.OrderId,
+                domainEvent.UserId,
+                domainEvent.Amount,
+                domainEvent.PaymentMethod,
+                success: true));
+
+            // 3) 失效相关订单缓存
+            await _cacheService.RemoveByPatternAsync($"order:{domainEvent.OrderId}");
+            await _cacheService.RemoveByPatternAsync($"orders:user:{domainEvent.UserId}");
         }
     }
 }

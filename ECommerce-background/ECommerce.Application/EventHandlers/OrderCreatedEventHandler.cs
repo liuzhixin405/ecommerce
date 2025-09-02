@@ -1,5 +1,6 @@
 using ECommerce.Core.EventBus;
 using ECommerce.Domain.Events;
+using ECommerce.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Application.EventHandlers
@@ -10,10 +11,23 @@ namespace ECommerce.Application.EventHandlers
     public class OrderCreatedEventHandler : IEventHandler<OrderCreatedEvent>
     {
         private readonly ILogger<OrderCreatedEventHandler> _logger;
+        private readonly IShoppingCartRepository _shoppingCartRepository;
+        private readonly IStatisticsService _statisticsService;
+        private readonly INotificationService _notificationService;
+        private readonly ICacheService _cacheService;
 
-        public OrderCreatedEventHandler(ILogger<OrderCreatedEventHandler> logger)
+        public OrderCreatedEventHandler(
+            ILogger<OrderCreatedEventHandler> logger,
+            IShoppingCartRepository shoppingCartRepository,
+            IStatisticsService statisticsService,
+            INotificationService notificationService,
+            ICacheService cacheService)
         {
             _logger = logger;
+            _shoppingCartRepository = shoppingCartRepository;
+            _statisticsService = statisticsService;
+            _notificationService = notificationService;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> HandleAsync(OrderCreatedEvent domainEvent, CancellationToken cancellationToken = default)
@@ -40,17 +54,23 @@ namespace ECommerce.Application.EventHandlers
         /// </summary>
         private async Task ProcessOrderCreationAsync(OrderCreatedEvent domainEvent, CancellationToken cancellationToken)
         {
-            // 1. 记录订单创建日志
-            _logger.LogInformation("Order {OrderId} created for user {UserId} with total amount {TotalAmount} at {Timestamp}", 
-                domainEvent.OrderId, domainEvent.UserId, domainEvent.TotalAmount, domainEvent.OccurredOn);
+            // 1) 清理用户购物车
+            var cart = await _shoppingCartRepository.GetByUserIdAsync(domainEvent.UserId);
+            if (cart != null)
+            {
+                await _shoppingCartRepository.ClearCartAsync(cart.Id);
+                _logger.LogInformation("Cleared shopping cart {CartId} for user {UserId} after order {OrderId} creation", cart.Id, domainEvent.UserId, domainEvent.OrderId);
+            }
 
-            // 2. 可以在这里添加其他核心业务逻辑
-            // 比如：更新用户订单统计、发送订单确认等
-            
-            // 3. 模拟异步处理
-            await Task.Delay(50, cancellationToken);
-            
-            _logger.LogInformation("Order creation processing completed for order {OrderId}", domainEvent.OrderId);
+            // 2) 更新统计
+            await _statisticsService.UpdateOrderStatisticsAsync(domainEvent);
+
+            // 3) 通知（异步）
+            await _notificationService.SendOrderStatusNotificationAsync(domainEvent.OrderId.ToString(), domainEvent.UserId.ToString(), "Created");
+
+            // 4) 失效与订单相关的缓存
+            await _cacheService.RemoveByPatternAsync($"orders:user:{domainEvent.UserId}");
+            await _cacheService.RemoveByPatternAsync($"order:{domainEvent.OrderId}");
         }
     }
 }

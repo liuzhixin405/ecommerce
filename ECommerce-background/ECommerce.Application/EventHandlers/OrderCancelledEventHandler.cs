@@ -1,5 +1,6 @@
 using ECommerce.Core.EventBus;
 using ECommerce.Domain.Events;
+using ECommerce.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Application.EventHandlers
@@ -10,10 +11,20 @@ namespace ECommerce.Application.EventHandlers
     public class OrderCancelledEventHandler : IEventHandler<OrderCancelledEvent>
     {
         private readonly ILogger<OrderCancelledEventHandler> _logger;
+        private readonly IStatisticsService _statisticsService;
+        private readonly INotificationService _notificationService;
+        private readonly ICacheService _cacheService;
 
-        public OrderCancelledEventHandler(ILogger<OrderCancelledEventHandler> logger)
+        public OrderCancelledEventHandler(
+            ILogger<OrderCancelledEventHandler> logger,
+            IStatisticsService statisticsService,
+            INotificationService notificationService,
+            ICacheService cacheService)
         {
             _logger = logger;
+            _statisticsService = statisticsService;
+            _notificationService = notificationService;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> HandleAsync(OrderCancelledEvent domainEvent, CancellationToken cancellationToken = default)
@@ -44,13 +55,17 @@ namespace ECommerce.Application.EventHandlers
             _logger.LogInformation("Order {OrderId} cancelled with reason: {Reason} at {Timestamp}", 
                 domainEvent.OrderId, domainEvent.Reason, domainEvent.OccurredOn);
 
-            // 2. 可以在这里添加其他核心业务逻辑
-            // 比如：释放库存锁定、处理退款等
-            
-            // 3. 模拟异步处理
-            await Task.Delay(50, cancellationToken);
-            
-            _logger.LogInformation("Order cancellation processing completed for order {OrderId}", domainEvent.OrderId);
+            // 2) 更新统计
+            await _statisticsService.UpdateCancellationStatisticsAsync(domainEvent);
+
+            // 3) 发送通知
+            await _notificationService.SendOrderStatusNotificationAsync(domainEvent.OrderId.ToString(), domainEvent.UserId.ToString(), "Cancelled");
+
+            // 4) 失效缓存
+            await _cacheService.RemoveByPatternAsync($"order:{domainEvent.OrderId}");
+            await _cacheService.RemoveByPatternAsync($"orders:user:{domainEvent.UserId}");
+
+            _logger.LogInformation("Order cancellation handled for order {OrderId}", domainEvent.OrderId);
         }
     }
 }

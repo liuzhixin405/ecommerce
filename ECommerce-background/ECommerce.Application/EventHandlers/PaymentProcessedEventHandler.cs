@@ -1,5 +1,6 @@
 using ECommerce.Core.EventBus;
 using ECommerce.Domain.Events;
+using ECommerce.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
 namespace ECommerce.Application.EventHandlers
@@ -10,10 +11,20 @@ namespace ECommerce.Application.EventHandlers
     public class PaymentProcessedEventHandler : IEventHandler<PaymentProcessedEvent>
     {
         private readonly ILogger<PaymentProcessedEventHandler> _logger;
+        private readonly INotificationService _notificationService;
+        private readonly IStatisticsService _statisticsService;
+        private readonly ICacheService _cacheService;
 
-        public PaymentProcessedEventHandler(ILogger<PaymentProcessedEventHandler> logger)
+        public PaymentProcessedEventHandler(
+            ILogger<PaymentProcessedEventHandler> logger,
+            INotificationService notificationService,
+            IStatisticsService statisticsService,
+            ICacheService cacheService)
         {
             _logger = logger;
+            _notificationService = notificationService;
+            _statisticsService = statisticsService;
+            _cacheService = cacheService;
         }
 
         public async Task<bool> HandleAsync(PaymentProcessedEvent domainEvent, CancellationToken cancellationToken = default)
@@ -40,28 +51,28 @@ namespace ECommerce.Application.EventHandlers
         /// </summary>
         private async Task ProcessPaymentAsync(PaymentProcessedEvent domainEvent, CancellationToken cancellationToken)
         {
-            // 1. 记录支付处理日志
-            _logger.LogInformation("Payment {PaymentId} processed for order {OrderId} with amount {Amount} at {Timestamp}", 
-                domainEvent.PaymentId, domainEvent.OrderId, domainEvent.Amount, domainEvent.OccurredOn);
+            // 1) 发送通知
+            await _notificationService.SendPaymentNotificationAsync(domainEvent);
 
-            // 2. 根据支付状态执行相应的业务逻辑
+            // 2) 更新统计（仅成功时）
             if (domainEvent.Success)
             {
-                _logger.LogInformation("Payment {PaymentId} successful for order {OrderId}", domainEvent.PaymentId, domainEvent.OrderId);
-            }
-            else
-            {
-                _logger.LogWarning("Payment {PaymentId} failed for order {OrderId} with reason: {ErrorMessage}", 
-                    domainEvent.PaymentId, domainEvent.OrderId, domainEvent.ErrorMessage);
+                await _statisticsService.UpdatePaymentStatisticsAsync(new OrderPaidEvent(
+                    domainEvent.OrderId,
+                    domainEvent.UserId,
+                    domainEvent.PaymentId,
+                    domainEvent.Amount,
+                    domainEvent.PaymentMethod));
             }
 
-            // 3. 可以在这里添加其他核心业务逻辑
-            // 比如：更新订单状态、发送通知等
-            
-            // 4. 模拟异步处理
-            await Task.Delay(50, cancellationToken);
-            
-            _logger.LogInformation("Payment processing completed for payment {PaymentId}", domainEvent.PaymentId);
+            // 3) 支付失败时，可考虑释放锁定库存由上游处理（此处仅发通知/打点）
+            if (!domainEvent.Success)
+            {
+                await _notificationService.SendSystemAlertAsync($"Payment failed: {domainEvent.PaymentId}", "Warning");
+            }
+
+            // 4) 失效订单相关缓存
+            await _cacheService.RemoveByPatternAsync($"order:{domainEvent.OrderId}");
         }
     }
 }
