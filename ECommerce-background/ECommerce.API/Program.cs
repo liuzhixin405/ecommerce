@@ -90,6 +90,9 @@ builder.Services.AddScoped<OrderCancelledEventHandler>();
 builder.Services.AddScoped<InventoryUpdatedEventHandler>();
 builder.Services.AddScoped<PaymentProcessedEventHandler>();
 builder.Services.AddScoped<UserRegisteredEventHandler>();
+builder.Services.AddScoped<PaymentSucceededEventHandler>();
+builder.Services.AddScoped<PaymentFailedEventHandler>();
+builder.Services.AddScoped<StockLockedEventHandler>();
 
 builder.Services.AddHostedService<EventBusStartupService>();
 builder.Services.AddHostedService<OrderExpirationService>();

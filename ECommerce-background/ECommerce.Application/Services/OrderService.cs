@@ -254,6 +254,24 @@ namespace ECommerce.Application.Services
             {
                 _logger.LogWarning("Payment failed for order: {OrderId}, Error: {Error}", 
                     paymentDto.OrderId, paymentResult.Message);
+
+                // 发布支付失败事件
+                try
+                {
+                    var paymentFailedEvent = new PaymentFailedEvent(
+                        paymentResult.PaymentId ?? string.Empty,
+                        order.Id,
+                        order.UserId,
+                        paymentDto.Amount,
+                        paymentDto.PaymentMethod,
+                        paymentResult.Message);
+                    await _eventBus.PublishAsync(paymentFailedEvent);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to publish payment failed event for order {OrderId}", order.Id);
+                }
+
                 return false;
             }
 
@@ -280,6 +298,15 @@ namespace ECommerce.Application.Services
                     paymentDto.PaymentMethod);
 
                 await _eventBus.PublishAsync(orderPaidEvent);
+
+                var paymentSucceededEvent = new PaymentSucceededEvent(
+                    paymentResult.PaymentId,
+                    order.Id,
+                    order.UserId,
+                    paymentDto.Amount,
+                    paymentDto.PaymentMethod);
+
+                await _eventBus.PublishAsync(paymentSucceededEvent);
 
                 var paymentProcessedEvent = new PaymentProcessedEvent(
                     paymentResult.PaymentId,

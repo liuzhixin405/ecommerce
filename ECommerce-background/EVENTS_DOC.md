@@ -6,6 +6,8 @@
 - OrderCreatedEvent
 - StockLockedEvent
 - PaymentProcessedEvent
+- PaymentSucceededEvent（新增）
+- PaymentFailedEvent（新增）
 - OrderPaidEvent
 - InventoryUpdatedEvent
 - OrderCancelledEvent
@@ -37,7 +39,8 @@
     await _eventBus.PublishAsync(stockLockedEvent);
     ```
 - 订阅（Subscriber）
-  - 目前未实现对应 Handler，如需对锁库存进行异步监控/补偿，可新增 `StockLockedEventHandler`。
+  - 文件：`ECommerce.Application/EventHandlers/StockLockedEventHandler.cs`
+  - 行为：记录锁定日志；发送锁定通知；可作为异步补偿/监控切入点
 
 ### PaymentProcessedEvent
 - 发布（Publisher）
@@ -50,7 +53,33 @@
     ```
 - 订阅（Subscriber）
   - 文件：`ECommerce.Application/EventHandlers/PaymentProcessedEventHandler.cs`
-  - 行为：发送支付处理通知；成功时更新支付统计；失败时发送系统告警；清理订单缓存
+  - 行为：发送支付处理通知；成功时更新支付统计；失败时发送系统告警；清理订单缓存（注意：已拆分成功/失败事件以简化分支）
+
+### PaymentSucceededEvent（新增）
+- 发布（Publisher）
+  - 文件：`ECommerce.Application/Services/OrderService.cs`
+  - 方法：`ProcessPaymentAsync`（支付成功时）
+  - 代码：
+    ```
+    var paymentSucceededEvent = new PaymentSucceededEvent(paymentResult.PaymentId, order.Id, order.UserId, paymentDto.Amount, paymentDto.PaymentMethod);
+    await _eventBus.PublishAsync(paymentSucceededEvent);
+    ```
+- 订阅（Subscriber）
+  - 文件：`ECommerce.Application/EventHandlers/PaymentSucceededEventHandler.cs`
+  - 行为：更新支付/销售统计；发送支付成功通知；清理订单缓存
+
+### PaymentFailedEvent（新增）
+- 发布（Publisher）
+  - 文件：`ECommerce.Application/Services/OrderService.cs`
+  - 方法：`ProcessPaymentAsync`（支付失败时）
+  - 代码：
+    ```
+    var paymentFailedEvent = new PaymentFailedEvent(paymentResult.PaymentId \?\? string.Empty, order.Id, order.UserId, paymentDto.Amount, paymentDto.PaymentMethod, paymentResult.Message);
+    await _eventBus.PublishAsync(paymentFailedEvent);
+    ```
+- 订阅（Subscriber）
+  - 文件：`ECommerce.Application/EventHandlers/PaymentFailedEventHandler.cs`
+  - 行为：发送失败通知与系统告警；清理订单缓存
 
 ### OrderPaidEvent
 - 发布（Publisher）
@@ -125,7 +154,7 @@
 ### Program.cs 中的相关注册
 - 文件：`ECommerce.API/Program.cs`
   - 注册事件总线：`builder.Services.AddRabbitMQEventBus(builder.Configuration);`
-  - 注册事件处理器：`OrderCreatedEventHandler`、`OrderPaidEventHandler`、`OrderStatusChangedEventHandler`、`OrderCancelledEventHandler`、`InventoryUpdatedEventHandler`、`PaymentProcessedEventHandler`、`UserRegisteredEventHandler`
+  - 注册事件处理器：`OrderCreatedEventHandler`、`OrderPaidEventHandler`、`OrderStatusChangedEventHandler`、`OrderCancelledEventHandler`、`InventoryUpdatedEventHandler`、`PaymentProcessedEventHandler`、`PaymentSucceededEventHandler`、`PaymentFailedEventHandler`、`StockLockedEventHandler`、`UserRegisteredEventHandler`
   - 启动服务：`builder.Services.AddHostedService<EventBusStartupService>();`
 
 ---
