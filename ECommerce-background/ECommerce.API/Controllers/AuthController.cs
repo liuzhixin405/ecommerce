@@ -1,3 +1,5 @@
+using ECommerce.Core.EventBus;
+using ECommerce.Domain.Events;
 using ECommerce.Domain.Interfaces;
 using ECommerce.Domain.Models;
 using Microsoft.AspNetCore.Authorization;
@@ -7,13 +9,14 @@ namespace ECommerce.API.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
-    public class AuthController : ControllerBase
+    public class AuthController : BaseController
     {
         private readonly IAuthService _authService;
-
-        public AuthController(IAuthService authService)
+        private readonly IEventBus _eventBus;
+        public AuthController(IAuthService authService,IEventBus eventBus)
         {
             _authService = authService;
+            _eventBus = eventBus;
         }
 
         [HttpPost("register")]
@@ -24,7 +27,12 @@ namespace ECommerce.API.Controllers
                 var result = await _authService.RegisterAsync(createUserDto);
                 if (result == null)
                     return BadRequest("Registration failed");
-
+               await  _eventBus.PublishAsync(new UserRegisteredEvent(result.User.Id, result.User.UserName, result.User.Email)
+                {
+                    UserId = result.User.Id,
+                    Email = result.User.Email,
+                    OccurredOn = DateTime.UtcNow
+                });
                 return Ok(result);
             }
             catch (InvalidOperationException ex)
@@ -68,11 +76,10 @@ namespace ECommerce.API.Controllers
         [Authorize]
         public async Task<ActionResult> LogoutAll()
         {
-            var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
+            if (CurrentUserId == null)
                 return BadRequest("Invalid user");
 
-            var result = await _authService.LogoutAllAsync(userId);
+            var result = await _authService.LogoutAllAsync(CurrentUserId.Value);
             return Ok(new { message = "Logout from all devices successful" });
         }
     }

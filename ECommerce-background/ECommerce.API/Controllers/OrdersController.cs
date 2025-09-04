@@ -5,76 +5,48 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ECommerce.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class OrdersController : ControllerBase
+    public class OrdersController : BaseController
     {
         private readonly IOrderService _orderService;
+        private readonly IRabbitMqDelayPublisher _delayPublisher;
 
-        public OrdersController(IOrderService orderService)
+        public OrdersController(IOrderService orderService, IRabbitMqDelayPublisher delayPublisher)
         {
             _orderService = orderService;
+            _delayPublisher = delayPublisher;
         }
 
         [HttpGet]
         public async Task<ActionResult<IEnumerable<OrderDto>>> GetOrders()
         {
-            try
-            {
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
-                    return BadRequest("Invalid user");
+            if (CurrentUserId == null)
+                return BadRequest("Invalid user");
 
-                var orders = await _orderService.GetUserOrdersAsync(userId);
-                return Ok(orders);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Internal server error");
-            }
+            var orders = await _orderService.GetUserOrdersAsync(CurrentUserId.Value);
+            return Ok(orders);
         }
 
         [HttpGet("all")]
         [Authorize(Roles = "Admin")]
         public async Task<ActionResult<IEnumerable<OrderDto>>> GetAllOrders()
         {
-            try
-            {
-                var orders = await _orderService.GetAllOrdersAsync();
-                return Ok(orders);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Internal server error");
-            }
+            var orders = await _orderService.GetAllOrdersAsync();
+            return Ok(orders);
         }
 
         [HttpGet("{id}")]
         public async Task<ActionResult<OrderDto>> GetOrder(Guid id)
         {
-            try
-            {
-                var order = await _orderService.GetOrderByIdAsync(id);
-                if (order == null)
-                    return NotFound();
+            var order = await _orderService.GetOrderByIdAsync(id);
+            if (order == null)
+                return NotFound();
 
-                // Check if user owns this order or is admin
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-                var isAdmin = User.IsInRole("Admin");
-                
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
-                    return BadRequest("Invalid user");
+            if (!IsAdmin && order.UserId != CurrentUserId)
+                return Forbid();
 
-                if (!isAdmin && order.UserId != userId)
-                    return Forbid();
-
-                return Ok(order);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Internal server error");
-            }
+            return Ok(order);
         }
 
         [HttpPost]
@@ -85,28 +57,16 @@ namespace ECommerce.API.Controllers
             {
                 return BadRequest(ModelState);
             }
-            
-            try
-            {
-                var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);
-                if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out Guid userId))
-                    return BadRequest("Invalid user");
 
-                var order = await _orderService.CreateOrderAsync(userId, createOrderDto);
-                return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
-            }
-            catch (ArgumentException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (InvalidOperationException ex)
-            {
-                return BadRequest(ex.Message);
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Internal server error");
-            }
+            if (CurrentUserId == null)
+                return BadRequest("Invalid user");
+
+            var order = await _orderService.CreateOrderAsync(CurrentUserId.Value, createOrderDto);
+
+            // 发送延迟消息
+            await _delayPublisher.PublishOrderDelayMessageAsync(order.Id, TimeSpan.FromMinutes(30));
+
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
 
         [HttpPost("payment")]
@@ -117,7 +77,7 @@ namespace ECommerce.API.Controllers
             {
                 return BadRequest(ModelState);
             }
-            
+
             try
             {
                 var result = await _orderService.ProcessPaymentAsync(paymentDto);
@@ -194,7 +154,7 @@ namespace ECommerce.API.Controllers
             {
                 return BadRequest(ModelState);
             }
-            
+
             try
             {
                 var order = await _orderService.UpdateOrderStatusAsync(id, updateOrderStatusDto);

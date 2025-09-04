@@ -5,10 +5,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ECommerce.API.Controllers
 {
-    [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class PaymentController : ControllerBase
+    public class PaymentController : BaseController
     {
         private readonly IPaymentService _paymentService;
         private readonly ILogger<PaymentController> _logger;
@@ -30,7 +29,7 @@ namespace ECommerce.API.Controllers
                 _logger.LogInformation("Processing payment for order: {OrderId}", paymentRequest.OrderId);
 
                 var result = await _paymentService.ProcessPaymentAsync(paymentRequest);
-                
+
                 if (result.Success)
                 {
                     return Ok(result);
@@ -79,7 +78,7 @@ namespace ECommerce.API.Controllers
                 _logger.LogInformation("Processing refund for order: {OrderId}", refundRequest.OrderId);
 
                 var result = await _paymentService.ProcessRefundAsync(refundRequest);
-                
+
                 if (result.Success)
                 {
                     return Ok(result);
@@ -154,6 +153,20 @@ namespace ECommerce.API.Controllers
                 });
 
             return Ok(paymentMethods);
+        }
+
+        /// <summary>
+        /// 发起支付
+        /// </summary>
+        [HttpPost("pay")]
+        public async Task<IActionResult> Pay(PaymentDto dto)
+        {
+            if (CurrentUserId == null)
+                return BadRequest("Invalid user");
+
+            // 直接用 CurrentUserId.Value
+            // ...
+            return Ok();
         }
     }
 }

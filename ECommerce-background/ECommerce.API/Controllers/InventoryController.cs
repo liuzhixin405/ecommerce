@@ -8,7 +8,7 @@ namespace ECommerce.API.Controllers
     [ApiController]
     [Route("api/[controller]")]
     [Authorize]
-    public class InventoryController : ControllerBase
+    public class InventoryController : BaseController
     {
         private readonly IInventoryService _inventoryService;
         private readonly ILogger<InventoryController> _logger;
@@ -28,8 +28,6 @@ namespace ECommerce.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Checking stock for product: {ProductId}, quantity: {Quantity}", productId, quantity);
-
                 var result = await _inventoryService.CheckStockAsync(productId, quantity);
                 return Ok(result);
             }
@@ -49,8 +47,6 @@ namespace ECommerce.API.Controllers
         {
             try
             {
-                _logger.LogInformation("Getting inventory info for product: {ProductId}", productId);
-
                 var result = await _inventoryService.GetProductInventoryAsync(productId);
                 return Ok(result);
             }
@@ -65,24 +61,18 @@ namespace ECommerce.API.Controllers
         /// 扣减库存
         /// </summary>
         [HttpPost("deduct")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<InventoryOperationResult>> DeductStock([FromBody] InventoryUpdateRequest request)
         {
+            if (!IsAdmin)
+                return Forbid();
+
             try
             {
-                _logger.LogInformation("Deducting stock for product: {ProductId}, quantity: {Quantity}", 
-                    request.ProductId, request.Quantity);
-
                 var result = await _inventoryService.DeductStockAsync(request.ProductId, request.Quantity);
-                
                 if (result.Success)
-                {
                     return Ok(result);
-                }
                 else
-                {
                     return BadRequest(new { message = result.Message, details = result });
-                }
             }
             catch (Exception ex)
             {
@@ -95,24 +85,18 @@ namespace ECommerce.API.Controllers
         /// 恢复库存
         /// </summary>
         [HttpPost("restore")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<InventoryOperationResult>> RestoreStock([FromBody] InventoryUpdateRequest request)
         {
+            if (!IsAdmin)
+                return Forbid();
+
             try
             {
-                _logger.LogInformation("Restoring stock for product: {ProductId}, quantity: {Quantity}", 
-                    request.ProductId, request.Quantity);
-
                 var result = await _inventoryService.RestoreStockAsync(request.ProductId, request.Quantity);
-                
                 if (result.Success)
-                {
                     return Ok(result);
-                }
                 else
-                {
                     return BadRequest(new { message = result.Message, details = result });
-                }
             }
             catch (Exception ex)
             {
@@ -125,24 +109,18 @@ namespace ECommerce.API.Controllers
         /// 锁定库存
         /// </summary>
         [HttpPost("lock")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<InventoryOperationResult>> LockStock([FromBody] InventoryLockRequest request)
         {
+            if (!IsAdmin)
+                return Forbid();
+
             try
             {
-                _logger.LogInformation("Locking stock for product: {ProductId}, quantity: {Quantity}, order: {OrderId}", 
-                    request.ProductId, request.Quantity, request.OrderId);
-
                 var result = await _inventoryService.LockStockAsync(request.ProductId, request.Quantity, request.OrderId);
-                
                 if (result.Success)
-                {
                     return Ok(result);
-                }
                 else
-                {
                     return BadRequest(new { message = result.Message, details = result });
-                }
             }
             catch (Exception ex)
             {
@@ -155,24 +133,18 @@ namespace ECommerce.API.Controllers
         /// 释放锁定的库存
         /// </summary>
         [HttpPost("release")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<InventoryOperationResult>> ReleaseLockedStock([FromBody] InventoryLockRequest request)
         {
+            if (!IsAdmin)
+                return Forbid();
+
             try
             {
-                _logger.LogInformation("Releasing locked stock for product: {ProductId}, quantity: {Quantity}, order: {OrderId}", 
-                    request.ProductId, request.Quantity, request.OrderId);
-
                 var result = await _inventoryService.ReleaseLockedStockAsync(request.ProductId, request.Quantity, request.OrderId);
-                
                 if (result.Success)
-                {
                     return Ok(result);
-                }
                 else
-                {
                     return BadRequest(new { message = result.Message, details = result });
-                }
             }
             catch (Exception ex)
             {
@@ -185,23 +157,18 @@ namespace ECommerce.API.Controllers
         /// 批量更新库存
         /// </summary>
         [HttpPost("batch-update")]
-        [Authorize(Roles = "Admin")]
         public async Task<ActionResult<BatchInventoryUpdateResult>> BatchUpdateInventory([FromBody] List<InventoryUpdate> updates)
         {
+            if (!IsAdmin)
+                return Forbid();
+
             try
             {
-                _logger.LogInformation("Processing batch inventory update for {Count} items", updates.Count);
-
                 var result = await _inventoryService.BatchUpdateInventoryAsync(updates);
-                
                 if (result.OverallSuccess)
-                {
                     return Ok(result);
-                }
                 else
-                {
                     return BadRequest(new { message = result.Message, details = result });
-                }
             }
             catch (Exception ex)
             {

@@ -11,12 +11,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ECommerce.API.BackgroundServices;
+using ECommerce.Domain.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 builder.Services.AddControllers();
-
+builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("JwtSettings"));
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -49,13 +50,18 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
-
-// Add DbContext
+#if DEBUG
+builder.Services.AddDbContext<ECommerceDbContext>(options =>
+    options.UseInMemoryDatabase("ECommerceTestDb"));
+#else
+Add DbContext
 builder.Services.AddDbContext<ECommerceDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
-        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
+       ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
     ));
+#endif
+
 
 // Add Repositories
 builder.Services.AddScoped<IUserRepository, UserRepository>();
@@ -63,7 +69,7 @@ builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
 builder.Services.AddScoped<IInventoryTransactionRepository, InventoryTransactionRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
-
+builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
 // Add Core Business Services
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
@@ -95,8 +101,9 @@ builder.Services.AddScoped<PaymentFailedEventHandler>();
 builder.Services.AddScoped<StockLockedEventHandler>();
 
 builder.Services.AddHostedService<EventBusStartupService>();
-builder.Services.AddHostedService<OrderExpirationService>();
-
+builder.Services.AddHostedService<OrderExpirationConsumer>();
+builder.Services.AddSingleton<IRabbitMqDelayPublisher, RabbitMqDelayPublisher>();
+builder.Services.AddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
