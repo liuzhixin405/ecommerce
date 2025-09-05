@@ -12,6 +12,16 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using ECommerce.API.BackgroundServices;
 using ECommerce.Domain.Models;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using ECommerce.API;
+
+// 检查是否是数据库初始化命令
+if (args.Length > 0 && args[0].StartsWith("db-"))
+{
+    await RunDatabaseInitTool(args);
+    return;
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -50,17 +60,17 @@ builder.Services.AddCors(options =>
               .AllowCredentials();
     });
 });
-#if DEBUG
-builder.Services.AddDbContext<ECommerceDbContext>(options =>
-    options.UseInMemoryDatabase("ECommerceTestDb"));
-#else
-Add DbContext
+//#if DEBUG
+//builder.Services.AddDbContext<ECommerceDbContext>(options =>
+  //  options.UseInMemoryDatabase("ECommerceTestDb"));
+//#else
+//Add DbContext
 builder.Services.AddDbContext<ECommerceDbContext>(options =>
     options.UseMySql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
        ServerVersion.AutoDetect(builder.Configuration.GetConnectionString("DefaultConnection"))
     ));
-#endif
+//#endif
 
 
 // Add Repositories
@@ -127,3 +137,30 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// 运行数据库初始化工具
+/// </summary>
+static async Task RunDatabaseInitTool(string[] args)
+{
+    // 构建配置
+    var configuration = new ConfigurationBuilder()
+        .SetBasePath(Directory.GetCurrentDirectory())
+        .AddJsonFile("appsettings.json", optional: false)
+        .AddJsonFile("appsettings.Development.json", optional: true)
+        .Build();
+
+    // 构建日志
+    using var loggerFactory = LoggerFactory.Create(builder =>
+        builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+
+    var logger = loggerFactory.CreateLogger<DatabaseInitTool>();
+
+    // 创建工具实例并执行
+    var tool = new DatabaseInitTool(configuration, logger);
+    
+    // 移除 "db-" 前缀
+    var cleanArgs = args.Select(arg => arg.StartsWith("db-") ? arg.Substring(3) : arg).ToArray();
+    
+    await tool.InitializeDatabaseAsync(cleanArgs);
+}
