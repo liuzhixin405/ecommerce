@@ -1,4 +1,5 @@
 using ECommerce.Infrastructure.Data;
+using ECommerce.Infrastructure.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -41,6 +42,9 @@ namespace ECommerce.API
                         break;
                     case "seed":
                         await SeedDatabaseAsync();
+                        break;
+                    case "force-seed":
+                        await ForceSeedDatabaseAsync();
                         break;
                     case "status":
                         await CheckDatabaseStatusAsync();
@@ -106,23 +110,37 @@ namespace ECommerce.API
 
             using var context = CreateDbContext();
             
-            // 检查是否已有数据
-            var hasUsers = await context.Users.AnyAsync();
-            var hasProducts = await context.Products.AnyAsync();
+            // 创建种子数据服务
+            using var loggerFactory = LoggerFactory.Create(builder =>
+                builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+            var seedLogger = loggerFactory.CreateLogger<DatabaseSeedService>();
+            var seedService = new DatabaseSeedService(context, seedLogger);
             
-            if (hasUsers || hasProducts)
-            {
-                _logger.LogWarning("数据库已包含数据，跳过种子数据填充");
-                return;
-            }
-            
-            // 确保数据库存在
-            await context.Database.EnsureCreatedAsync();
-            
-            // 种子数据已在 DbContext 的 OnModelCreating 中配置
-            // 这里可以添加额外的种子数据逻辑
+            // 执行种子数据填充
+            await seedService.SeedAsync();
             
             _logger.LogInformation("种子数据填充完成");
+        }
+
+        /// <summary>
+        /// 强制重新填充种子数据
+        /// </summary>
+        private async Task ForceSeedDatabaseAsync()
+        {
+            _logger.LogInformation("开始强制填充种子数据...");
+
+            using var context = CreateDbContext();
+            
+            // 创建种子数据服务
+            using var loggerFactory = LoggerFactory.Create(builder =>
+                builder.AddConsole().SetMinimumLevel(LogLevel.Information));
+            var seedLogger = loggerFactory.CreateLogger<DatabaseSeedService>();
+            var seedService = new DatabaseSeedService(context, seedLogger);
+            
+            // 强制重新填充种子数据
+            await seedService.ForceSeedAsync();
+            
+            _logger.LogInformation("强制种子数据填充完成");
         }
 
         /// <summary>
@@ -184,15 +202,18 @@ namespace ECommerce.API
             Console.WriteLine("数据库初始化工具使用说明:");
             Console.WriteLine();
             Console.WriteLine("命令:");
-            Console.WriteLine("  migrate  - 迁移数据库（默认）");
-            Console.WriteLine("  reset    - 重置数据库（删除并重新创建）");
-            Console.WriteLine("  seed     - 填充种子数据");
-            Console.WriteLine("  status   - 检查数据库状态");
-            Console.WriteLine("  help     - 显示此帮助信息");
+            Console.WriteLine("  migrate     - 迁移数据库（默认）");
+            Console.WriteLine("  reset       - 重置数据库（删除并重新创建）");
+            Console.WriteLine("  seed        - 填充种子数据（如果数据库为空）");
+            Console.WriteLine("  force-seed  - 强制重新填充种子数据（删除现有种子数据）");
+            Console.WriteLine("  status      - 检查数据库状态");
+            Console.WriteLine("  help        - 显示此帮助信息");
             Console.WriteLine();
             Console.WriteLine("使用示例:");
             Console.WriteLine("  dotnet run -- migrate");
             Console.WriteLine("  dotnet run -- reset");
+            Console.WriteLine("  dotnet run -- seed");
+            Console.WriteLine("  dotnet run -- force-seed");
             Console.WriteLine("  dotnet run -- status");
         }
 

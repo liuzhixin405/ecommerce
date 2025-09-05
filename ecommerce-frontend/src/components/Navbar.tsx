@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, User, Menu, X, Users } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Users, Settings } from 'lucide-react';
 import { cartService } from '../services/cartService';
 import { User as UserType } from '../interfaces/User';
 import Button from './ui/Button';
@@ -8,11 +8,12 @@ interface NavbarProps {
   onCartClick?: () => void;
   onLoginClick?: () => void;
   onUsersClick?: () => void;
+  onAdminClick?: () => void;
   isAuthenticated?: boolean;
   user?: UserType | null;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onCartClick, onLoginClick, onUsersClick, isAuthenticated, user }) => {
+const Navbar: React.FC<NavbarProps> = ({ onCartClick, onLoginClick, onUsersClick, onAdminClick, isAuthenticated, user }) => {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -63,6 +64,17 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onLoginClick, onUsersClick
                 </span>
               )}
             </button>
+
+            {/* 后台管理按钮 - 仅管理员可见 */}
+            {isAuthenticated && user?.role === 'Admin' && (
+              <button
+                onClick={onAdminClick}
+                className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
+                title="后台管理"
+              >
+                <Settings className="w-6 h-6" />
+              </button>
+            )}
 
             {/* 用户管理按钮 - 仅管理员可见 */}
             {isAuthenticated && user?.role === 'Admin' && (

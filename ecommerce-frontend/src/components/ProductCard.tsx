@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Product } from '../interfaces';
 import { formatPrice } from '../utils/format';
 import { cartService } from '../services/cartService';
 import Button from './ui/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/Card';
-import { ShoppingCart, Eye } from 'lucide-react';
+import { ShoppingCart, Eye, Image as ImageIcon } from 'lucide-react';
 
 interface ProductCardProps {
   product: Product;
@@ -12,6 +12,9 @@ interface ProductCardProps {
 }
 
 const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => {
+  const [imageError, setImageError] = useState(false);
+  const [imageLoading, setImageLoading] = useState(true);
+
   const handleAddToCart = () => {
     cartService.addToCart(product, 1);
     // 这里可以添加成功提示
@@ -23,14 +26,42 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => 
     }
   };
 
+  const handleImageLoad = () => {
+    setImageLoading(false);
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
+    setImageLoading(false);
+  };
+
   return (
     <Card className="h-full flex flex-col">
-      <div className="aspect-square overflow-hidden rounded-t-lg">
-        <img
-          src={product.imageUrl || 'https://via.placeholder.com/300x300?text=No+Image'}
-          alt={product.name}
-          className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
-        />
+      <div className="aspect-square overflow-hidden rounded-t-lg relative bg-gray-100">
+        {imageLoading && (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        )}
+        
+        {!imageError && product.imageUrl ? (
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className={`w-full h-full object-cover hover:scale-105 transition-transform duration-300 ${
+              imageLoading ? 'opacity-0' : 'opacity-100'
+            }`}
+            onLoad={handleImageLoad}
+            onError={handleImageError}
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-200">
+            <div className="text-center text-gray-500">
+              <ImageIcon className="w-12 h-12 mx-auto mb-2" />
+              <p className="text-sm">暂无图片</p>
+            </div>
+          </div>
+        )}
       </div>
       
       <CardHeader className="flex-1">

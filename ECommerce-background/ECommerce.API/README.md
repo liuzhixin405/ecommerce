@@ -389,7 +389,8 @@ using Microsoft.Extensions.Logging;
 |------|------|------|
 | `db-migrate` | 迁移数据库（创建表结构） | `dotnet run -- db-migrate` |
 | `db-reset` | 重置数据库（删除并重新创建） | `dotnet run -- db-reset` |
-| `db-seed` | 填充种子数据 | `dotnet run -- db-seed` |
+| `db-seed` | 填充种子数据（如果数据库为空） | `dotnet run -- db-seed` |
+| `db-force-seed` | 强制重新填充种子数据（删除现有种子数据） | `dotnet run -- db-force-seed` |
 | `db-status` | 检查数据库状态 | `dotnet run -- db-status` |
 | `db-help` | 显示帮助信息 | `dotnet run -- db-help` |
 
@@ -397,6 +398,8 @@ using Microsoft.Extensions.Logging;
 - 所有命令都需要在 `ECommerce.API` 目录下执行
 - `db-reset` 命令会删除所有数据，请谨慎使用
 - 首次运行建议使用 `db-migrate` 命令
+- 种子数据现在只在数据库初始化时执行，不会在每次接口调用时重复执行
+- 使用 `db-force-seed` 可以强制重新填充种子数据（会删除现有的种子数据）
 
 ## 开发指南
 

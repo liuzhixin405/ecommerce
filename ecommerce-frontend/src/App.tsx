@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
 import ProductList from './pages/ProductList';
+import AdminDashboard from './pages/AdminDashboard';
 import Cart from './components/Cart';
 import LoginModal from './components/LoginModal';
 import RegisterModal from './components/RegisterModal';
@@ -9,7 +10,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<'products' | 'cart' | 'users'>('products');
+  const [currentView, setCurrentView] = useState<'products' | 'cart' | 'users' | 'admin'>('products');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
@@ -30,6 +31,10 @@ function AppContent() {
     setCurrentView('users');
   };
 
+  const handleAdminClick = () => {
+    setCurrentView('admin');
+  };
+
   const handleCheckout = () => {
     // 这里可以添加结算逻辑
     console.log('Checkout clicked');
@@ -41,6 +46,7 @@ function AppContent() {
         onCartClick={handleCartClick} 
         onLoginClick={handleLoginClick}
         onUsersClick={handleUsersClick}
+        onAdminClick={handleAdminClick}
         isAuthenticated={isAuthenticated}
         user={user}
       />
@@ -60,6 +66,8 @@ function AppContent() {
             </div>
             <Cart onCheckout={handleCheckout} />
           </div>
+        ) : currentView === 'admin' ? (
+          <AdminDashboard />
         ) : (
           <UserManagement />
         )}

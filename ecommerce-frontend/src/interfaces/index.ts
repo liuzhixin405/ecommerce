@@ -90,3 +90,18 @@ export interface CartItem {
   product: Product;
   quantity: number;
 }
+
+export interface UpdateProductDto {
+  name: string;
+  description: string;
+  price: number;
+  stock: number;
+  category: string;
+  imageUrl: string;
+  isActive: boolean;
+}
+
+export interface BatchUpdateProductStatusDto {
+  productIds: string[];
+  isActive: boolean;
+}

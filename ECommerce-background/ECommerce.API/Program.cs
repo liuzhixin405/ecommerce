@@ -125,6 +125,9 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+// 配置静态文件服务
+app.UseStaticFiles();
+
 // 添加CORS中间件
 app.UseCors("AllowFrontend");
 
