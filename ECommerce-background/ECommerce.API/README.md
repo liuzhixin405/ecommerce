@@ -25,7 +25,7 @@ ECommerce.API/                    # Web API 层
 │   ├── PaymentController.cs     # 支付控制器
 │   └── InventoryTransactionsController.cs
 ├── BackgroundServices/          # 后台服务
-│   └── OrderExpirationService.cs
+│   └── OrderExpirationConsumer.cs
 ├── Extensions/                  # 扩展方法
 │   ├── GlobalExceptionMiddleware.cs
 │   └── ServiceCollectionExtensions.cs
