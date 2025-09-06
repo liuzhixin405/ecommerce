@@ -40,6 +40,7 @@ export class AuthService {
   }
 
   public async login(loginDto: LoginDto): Promise<LoginResponseDto> {
+    console.log('AuthService: Attempting login to:', `${API_BASE_URL}/auth/login`);
     const response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: {
@@ -50,10 +51,12 @@ export class AuthService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
+      console.error('AuthService: Login failed with status:', response.status, errorData);
       throw new Error(errorData.message || 'Login failed');
     }
 
     const data: LoginResponseDto = await response.json();
+    console.log('AuthService: Login successful, setting tokens');
     this.setTokens(data.token, data.refreshToken);
     return data;
   }
@@ -108,17 +111,21 @@ export class AuthService {
   }
 
   private setTokens(token: string, refreshToken: string): void {
+    console.log('AuthService: Setting tokens');
     this.token = token;
     this.refreshToken = refreshToken;
     localStorage.setItem('token', token);
     localStorage.setItem('refreshToken', refreshToken);
+    console.log('AuthService: Tokens saved to localStorage');
   }
 
   private clearTokens(): void {
+    console.log('AuthService: Clearing tokens');
     this.token = null;
     this.refreshToken = null;
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    console.log('AuthService: Tokens cleared from localStorage');
   }
 }
 

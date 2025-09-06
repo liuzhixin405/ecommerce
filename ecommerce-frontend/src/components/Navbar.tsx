@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ShoppingCart, User, Menu, X, Users, Settings } from 'lucide-react';
+import { ShoppingCart, User, Menu, X, Users, Settings, LogIn, LogOut } from 'lucide-react';
 import { cartService } from '../services/cartService';
 import { User as UserType } from '../interfaces/User';
 import Button from './ui/Button';
@@ -87,14 +87,29 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onLoginClick, onUsersClick
               </button>
             )}
 
-            {/* 用户按钮 */}
-            <button
-              onClick={onLoginClick}
-              className="p-2 text-gray-600 hover:text-blue-600 transition-colors"
-              title={isAuthenticated ? '退出登录' : '登录'}
-            >
-              <User className="w-6 h-6" />
-            </button>
+            {/* 用户信息 */}
+            {isAuthenticated && user ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700 hidden md:block">
+                  {user.userName || user.email}
+                </span>
+                <button
+                  onClick={onLoginClick}
+                  className="p-2 text-gray-600 hover:text-red-600 transition-colors"
+                  title="退出登录"
+                >
+                  <LogOut className="w-6 h-6" />
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={onLoginClick}
+                className="p-2 text-gray-600 hover:text-green-600 transition-colors"
+                title="登录"
+              >
+                <LogIn className="w-6 h-6" />
+              </button>
+            )}
 
             {/* 移动端菜单按钮 */}
             <div className="md:hidden">
