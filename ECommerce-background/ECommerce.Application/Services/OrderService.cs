@@ -12,6 +12,7 @@ namespace ECommerce.Application.Services
         private readonly IOrderRepository _orderRepository;
         private readonly IProductRepository _productRepository;
         private readonly IUserRepository _userRepository;
+        private readonly IAddressRepository _addressRepository;
         private readonly IPaymentService _paymentService;
         private readonly IInventoryService _inventoryService;
         private readonly IEventBus _eventBus;
@@ -21,6 +22,7 @@ namespace ECommerce.Application.Services
             IOrderRepository orderRepository,
             IProductRepository productRepository,
             IUserRepository userRepository,
+            IAddressRepository addressRepository,
             IPaymentService paymentService,
             IInventoryService inventoryService,
             IEventBus eventBus,
@@ -29,6 +31,7 @@ namespace ECommerce.Application.Services
             _orderRepository = orderRepository;
             _productRepository = productRepository;
             _userRepository = userRepository;
+            _addressRepository = addressRepository;
             _paymentService = paymentService;
             _inventoryService = inventoryService;
             _eventBus = eventBus;
@@ -58,6 +61,22 @@ namespace ECommerce.Application.Services
             var user = await _userRepository.GetByIdAsync(userId);
             if (user == null)
                 throw new ArgumentException("User not found");
+          
+            // 验证地址
+            Address? address = null;
+            if (createOrderDto.AddressId.HasValue)
+            {
+                address = await _addressRepository.GetByIdAsync(createOrderDto.AddressId.Value);
+                if (address == null || address.UserId != userId)
+                    throw new ArgumentException("指定的地址不存在或无权限访问，请先设置默认地址");
+            }
+            else
+            {
+                // 如果没有提供地址ID，尝试获取用户的默认地址
+                address = await _addressRepository.GetDefaultByUserIdAsync(userId);
+                if (address == null)
+                    throw new ArgumentException("请先设置默认收货地址");
+            }
 
             // 验证库存并锁定
             var inventoryUpdates = new List<InventoryUpdate>();
@@ -89,9 +108,9 @@ namespace ECommerce.Application.Services
             var order = new Order
             {
                 UserId = userId,
-                CustomerName = createOrderDto.CustomerName,
-                PhoneNumber = createOrderDto.PhoneNumber,
-                ShippingAddress = createOrderDto.ShippingAddress,
+                CustomerName = string.IsNullOrEmpty(createOrderDto.CustomerName) ? address.Name : createOrderDto.CustomerName,
+                PhoneNumber = string.IsNullOrEmpty(createOrderDto.PhoneNumber) ? address.Phone : createOrderDto.PhoneNumber,
+                ShippingAddress = string.IsNullOrEmpty(createOrderDto.ShippingAddress) ? address.FullAddress : createOrderDto.ShippingAddress,
                 PaymentMethod = createOrderDto.PaymentMethod,
                 Notes = createOrderDto.Notes,
                 Status = OrderStatus.Pending,
@@ -445,6 +464,41 @@ namespace ECommerce.Application.Services
                     Price = item.Price
                 }).ToList()
             };
+        }
+
+        public async Task<bool> CompleteOrderAsync(Guid orderId)
+        {
+            var order = await _orderRepository.GetByIdAsync(orderId);
+            if (order == null)
+                return false;
+
+            if (order.Status != OrderStatus.Delivered)
+                return false;
+
+            order.Status = OrderStatus.Completed;
+            order.CompletedAt = DateTime.UtcNow;
+
+            await _orderRepository.UpdateAsync(order);
+            _logger.LogInformation("Completed order: {OrderId}", orderId);
+
+            // 发布订单完成事件
+            try
+            {
+                var orderCompletedEvent = new OrderStatusChangedEvent(
+                    orderId,
+                    order.UserId,
+                    OrderStatus.Delivered,
+                    OrderStatus.Completed,
+                    "Order completed by customer");
+
+                await _eventBus.PublishAsync(orderCompletedEvent);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to publish order completed event for order {OrderId}", orderId);
+            }
+
+            return true;
         }
     }
 }

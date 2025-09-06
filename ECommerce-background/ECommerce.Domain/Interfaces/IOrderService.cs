@@ -13,6 +13,7 @@ namespace ECommerce.Domain.Interfaces
         Task<bool> ProcessPaymentAsync(PaymentDto paymentDto);
         Task<bool> ShipOrderAsync(Guid id, string trackingNumber);
         Task<bool> DeliverOrderAsync(Guid id);
+        Task<bool> CompleteOrderAsync(Guid id);
         Task<bool> CancelExpiredOrdersAsync();
     }
 }

@@ -30,6 +30,7 @@ namespace ECommerce.Domain.Entities
         public DateTime? PaidAt { get; set; }
         public DateTime? ShippedAt { get; set; }
         public DateTime? DeliveredAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
         public DateTime? CancelledAt { get; set; }
         
         [MaxLength(100)]
@@ -73,6 +74,7 @@ namespace ECommerce.Domain.Entities
         Confirmed,      // 已确认
         Shipped,        // 已发货
         Delivered,      // 已送达
+        Completed,      // 已完成
         Cancelled,      // 已取消
         Refunded        // 已退款
     }

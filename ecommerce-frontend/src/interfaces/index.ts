@@ -66,9 +66,10 @@ export interface CreateOrderItemDto {
 
 export interface CreateOrderDto {
   userId?: string;
-  customerName: string;
-  phoneNumber: string;
-  shippingAddress: string;
+  addressId?: string;
+  customerName?: string;
+  phoneNumber?: string;
+  shippingAddress?: string;
   paymentMethod: string;
   notes?: string;
   items: CreateOrderItemDto[];

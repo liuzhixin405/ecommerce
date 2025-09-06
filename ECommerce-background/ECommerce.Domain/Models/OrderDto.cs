@@ -66,15 +66,14 @@ namespace ECommerce.Domain.Models
 
     public class CreateOrderDto
     {
-        [Required]
+        public Guid? AddressId { get; set; }
+        
         [StringLength(100)]
         public string CustomerName { get; set; } = string.Empty;
         
-        [Required]
         [StringLength(50)]
         public string PhoneNumber { get; set; } = string.Empty;
         
-        [Required]
         [StringLength(200)]
         public string ShippingAddress { get; set; } = string.Empty;
         

@@ -3,6 +3,7 @@ import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import ProductList from './pages/ProductList';
 import OrdersPage from './pages/OrdersPage';
+import AddressPage from './pages/AddressPage';
 import AdminDashboard from './pages/AdminDashboard';
 import Cart from './components/Cart';
 import LoginModal from './components/LoginModal';
@@ -12,7 +13,7 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<'home' | 'products' | 'orders' | 'cart' | 'users' | 'admin'>('home');
+  const [currentView, setCurrentView] = useState<'home' | 'products' | 'orders' | 'addresses' | 'cart' | 'users' | 'admin'>('home');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
@@ -27,6 +28,10 @@ function AppContent() {
 
   const handleOrdersClick = () => {
     setCurrentView('orders');
+  };
+
+  const handleAddressesClick = () => {
+    setCurrentView('addresses');
   };
 
   const handleCartClick = () => {
@@ -60,6 +65,7 @@ function AppContent() {
         onHomeClick={handleHomeClick}
         onProductsClick={handleProductsClick}
         onOrdersClick={handleOrdersClick}
+        onAddressesClick={handleAddressesClick}
         onCartClick={handleCartClick} 
         onLoginClick={handleLoginClick}
         onUsersClick={handleUsersClick}
@@ -74,6 +80,8 @@ function AppContent() {
           <ProductList />
         ) : currentView === 'orders' ? (
           <OrdersPage />
+        ) : currentView === 'addresses' ? (
+          <AddressPage />
         ) : currentView === 'cart' ? (
           <div className="container mx-auto px-4 py-8">
             <div className="flex items-center justify-between mb-6">

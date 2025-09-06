@@ -2,6 +2,7 @@ using ECommerce.Core.EventBus;
 using ECommerce.Domain.Events;
 using ECommerce.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using ECommerce.Infrastructure.Services;
 
 namespace ECommerce.Application.EventHandlers
 {
@@ -14,17 +15,20 @@ namespace ECommerce.Application.EventHandlers
         private readonly IStatisticsService _statisticsService;
         private readonly INotificationService _notificationService;
         private readonly ICacheService _cacheService;
+        private readonly ECommerce.Domain.Interfaces.IOrderMessagePublisher _messagePublisher;
 
         public OrderPaidEventHandler(
             ILogger<OrderPaidEventHandler> logger,
             IStatisticsService statisticsService,
             INotificationService notificationService,
-            ICacheService cacheService)
+            ICacheService cacheService,
+            ECommerce.Domain.Interfaces.IOrderMessagePublisher messagePublisher)
         {
             _logger = logger;
             _statisticsService = statisticsService;
             _notificationService = notificationService;
             _cacheService = cacheService;
+            _messagePublisher = messagePublisher;
         }
 
         public async Task<bool> HandleAsync(OrderPaidEvent domainEvent, CancellationToken cancellationToken = default)
@@ -67,6 +71,11 @@ namespace ECommerce.Application.EventHandlers
             // 3) 失效相关订单缓存
             await _cacheService.RemoveByPatternAsync($"order:{domainEvent.OrderId}");
             await _cacheService.RemoveByPatternAsync($"orders:user:{domainEvent.UserId}");
+
+            // 4) 发送发货消息（延迟5秒后发货）
+            await Task.Delay(5000, cancellationToken);
+            await _messagePublisher.PublishShipmentMessageAsync(domainEvent.OrderId, domainEvent.UserId);
+            _logger.LogInformation("OrderPaidEventHandler: Sent shipment message for order {OrderId}", domainEvent.OrderId);
         }
     }
 }

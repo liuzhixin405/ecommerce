@@ -12,6 +12,7 @@ interface NavbarProps {
   onHomeClick?: () => void;
   onProductsClick?: () => void;
   onOrdersClick?: () => void;
+  onAddressesClick?: () => void;
   isAuthenticated?: boolean;
   user?: UserType | null;
 }
@@ -24,6 +25,7 @@ const Navbar: React.FC<NavbarProps> = ({
   onHomeClick, 
   onProductsClick, 
   onOrdersClick, 
+  onAddressesClick,
   isAuthenticated, 
   user 
 }) => {
@@ -65,12 +67,20 @@ const Navbar: React.FC<NavbarProps> = ({
                 产品
               </button>
               {isAuthenticated && (
-                <button 
-                  onClick={onOrdersClick}
-                  className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
-                >
-                  订单
-                </button>
+                <>
+                  <button 
+                    onClick={onOrdersClick}
+                    className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    订单
+                  </button>
+                  <button 
+                    onClick={onAddressesClick}
+                    className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                  >
+                    地址管理
+                  </button>
+                </>
               )}
             </div>
           </div>
@@ -171,15 +181,26 @@ const Navbar: React.FC<NavbarProps> = ({
               产品
             </button>
             {isAuthenticated && (
-              <button
-                onClick={() => {
-                  onOrdersClick?.();
-                  setIsMobileMenuOpen(false);
-                }}
-                className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
-              >
-                订单
-              </button>
+              <>
+                <button
+                  onClick={() => {
+                    onOrdersClick?.();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
+                >
+                  订单
+                </button>
+                <button
+                  onClick={() => {
+                    onAddressesClick?.();
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
+                >
+                  地址管理
+                </button>
+              </>
             )}
           </div>
         </div>

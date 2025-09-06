@@ -15,6 +15,7 @@ namespace ECommerce.API.BackgroundServices
         private readonly IRabbitMqConnectionProvider _rabbitProvider;
         private IModel? _channel;
         private string _consumerTag = string.Empty;
+        private volatile bool _isStopping = false;
 
         private const string ExpiredQueueName = "order.expired.queue";
 
@@ -49,6 +50,13 @@ namespace ECommerce.API.BackgroundServices
             var consumer = new AsyncEventingBasicConsumer(_channel);
             consumer.Received += async (model, ea) =>
             {
+                // 检查是否正在停止
+                if (_isStopping)
+                {
+                    _channel?.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                    return;
+                }
+
                 var body = ea.Body.ToArray();
                 var message = Encoding.UTF8.GetString(body);
                 if (Guid.TryParse(message, out Guid orderId))
@@ -68,18 +76,24 @@ namespace ECommerce.API.BackgroundServices
                             _logger.LogInformation("OrderExpirationConsumer: Order {OrderId} not cancelled (maybe already paid or changed)", orderId);
                         }
 
-                        _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                        _channel?.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                    }
+                    catch (ObjectDisposedException)
+                    {
+                        // 服务正在关闭，忽略此错误
+                        _logger.LogWarning("OrderExpirationConsumer: Service is being disposed, ignoring message for order {OrderId}", orderId);
+                        return;
                     }
                     catch (Exception ex)
                     {
                         _logger.LogError(ex, "Error processing expired order message for order {OrderId}", orderId);
-                        _channel.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, requeue: true);
+                        _channel?.BasicNack(deliveryTag: ea.DeliveryTag, multiple: false, requeue: true);
                     }
                 }
                 else
                 {
                     _logger.LogWarning("OrderExpirationConsumer: Received invalid expired-order message: {Message}", message);
-                    _channel.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
+                    _channel?.BasicAck(deliveryTag: ea.DeliveryTag, multiple: false);
                 }
 
                 await Task.Yield();
@@ -95,6 +109,7 @@ namespace ECommerce.API.BackgroundServices
         public override Task StopAsync(CancellationToken cancellationToken)
         {
             _logger.LogInformation("OrderExpirationConsumer is stopping.");
+            _isStopping = true;
 
             try
             {

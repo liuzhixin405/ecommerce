@@ -117,9 +117,26 @@ namespace ECommerce.API.Controllers
             {
                 var result = await _orderService.ShipOrderAsync(id, request.TrackingNumber);
                 if (!result)
-                    return BadRequest("Order shipping failed");
+                    return BadRequest("Order shipment failed");
 
                 return Ok(new { message = "Order shipped successfully" });
+            }
+            catch (Exception)
+            {
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        [HttpPut("{id}/confirm-delivery")]
+        public async Task<ActionResult> ConfirmDelivery(Guid id)
+        {
+            try
+            {
+                var result = await _orderService.CompleteOrderAsync(id);
+                if (!result)
+                    return BadRequest("Order completion failed");
+
+                return Ok(new { message = "Order completed successfully" });
             }
             catch (Exception)
             {

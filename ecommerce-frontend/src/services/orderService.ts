@@ -25,9 +25,20 @@ export const createOrder = async (orderData: CreateOrderDto): Promise<Order> => 
   try {
     const response = await apiClient.post<Order>('/orders', orderData);
     return response.data;
-  } catch (error) {
+  } catch (error: any) {
     console.error('Failed to create order:', error);
-    throw error;
+    
+    // 处理HTTP错误响应
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    }
+    
+    // 处理网络错误或其他错误
+    if (error.message) {
+      throw new Error(error.message);
+    }
+    
+    throw new Error('创建订单失败，请重试');
   }
 };
 

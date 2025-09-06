@@ -3,6 +3,7 @@ using ECommerce.Domain.Events;
 using ECommerce.Domain.Entities;
 using ECommerce.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
+using ECommerce.Infrastructure.Services;
 
 namespace ECommerce.Application.EventHandlers
 {
@@ -14,15 +15,18 @@ namespace ECommerce.Application.EventHandlers
         private readonly ILogger<OrderStatusChangedEventHandler> _logger;
         private readonly INotificationService _notificationService;
         private readonly ICacheService _cacheService;
+        private readonly ECommerce.Domain.Interfaces.IOrderMessagePublisher _messagePublisher;
 
         public OrderStatusChangedEventHandler(
             ILogger<OrderStatusChangedEventHandler> logger,
             INotificationService notificationService,
-            ICacheService cacheService)
+            ICacheService cacheService,
+            ECommerce.Domain.Interfaces.IOrderMessagePublisher messagePublisher)
         {
             _logger = logger;
             _notificationService = notificationService;
             _cacheService = cacheService;
+            _messagePublisher = messagePublisher;
         }
 
         public async Task<bool> HandleAsync(OrderStatusChangedEvent domainEvent, CancellationToken cancellationToken = default)
@@ -61,6 +65,10 @@ namespace ECommerce.Application.EventHandlers
                     break;
                 case OrderStatus.Shipped:
                     _logger.LogInformation("Order {OrderId} shipped with tracking number", domainEvent.OrderId);
+                    // 发货后延迟10秒自动发送完成消息（模拟物流时间）
+                    await Task.Delay(10000, cancellationToken);
+                    await _messagePublisher.PublishCompletionMessageAsync(domainEvent.OrderId, domainEvent.UserId);
+                    _logger.LogInformation("OrderStatusChangedEventHandler: Sent completion message for shipped order {OrderId}", domainEvent.OrderId);
                     break;
                 case OrderStatus.Delivered:
                     _logger.LogInformation("Order {OrderId} delivered successfully", domainEvent.OrderId);

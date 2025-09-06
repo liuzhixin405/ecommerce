@@ -15,6 +15,7 @@ using ECommerce.Domain.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using ECommerce.API;
+using RabbitMQ.Client;
 
 // 检查是否是数据库初始化命令
 if (args.Length > 0 && args[0].StartsWith("db-"))
@@ -77,6 +78,7 @@ builder.Services.AddDbContext<ECommerceDbContext>(options =>
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IAddressRepository, AddressRepository>();
 builder.Services.AddScoped<IInventoryTransactionRepository, InventoryTransactionRepository>();
 builder.Services.AddScoped<IRefreshTokenRepository, RefreshTokenRepository>();
 builder.Services.AddScoped<IShoppingCartRepository, ShoppingCartRepository>();
@@ -85,6 +87,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<IPaymentService, DefaultPaymentService>();
 builder.Services.AddScoped<IInventoryService, InventoryService>();
 
@@ -110,10 +113,26 @@ builder.Services.AddScoped<PaymentSucceededEventHandler>();
 builder.Services.AddScoped<PaymentFailedEventHandler>();
 builder.Services.AddScoped<StockLockedEventHandler>();
 
-builder.Services.AddHostedService<EventBusStartupService>();
-builder.Services.AddHostedService<OrderExpirationConsumer>();
+// 添加后台服务 - 使用条件注册，避免RabbitMQ不可用时阻止应用启动
+if (builder.Environment.IsDevelopment() || IsRabbitMQAvailable())
+{
+    builder.Services.AddHostedService<EventBusStartupService>();
+    builder.Services.AddHostedService<OrderExpirationConsumer>();
+    builder.Services.AddHostedService<OrderShipmentConsumer>();
+    builder.Services.AddHostedService<OrderCompletionConsumer>();
+}
+else
+{
+    builder.Services.AddLogging(logging =>
+    {
+        logging.AddConsole();
+    });
+    // 在非开发环境或RabbitMQ不可用时，记录警告但不阻止启动
+    Console.WriteLine("Warning: RabbitMQ services are disabled due to connection issues.");
+}
 builder.Services.AddSingleton<IRabbitMqDelayPublisher, RabbitMqDelayPublisher>();
 builder.Services.AddSingleton<IRabbitMqConnectionProvider, RabbitMqConnectionProvider>();
+builder.Services.AddSingleton<ECommerce.Domain.Interfaces.IOrderMessagePublisher, OrderMessagePublisher>();
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
@@ -140,6 +159,29 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+/// <summary>
+/// 检查RabbitMQ是否可用
+/// </summary>
+static bool IsRabbitMQAvailable()
+{
+    try
+    {
+        var factory = new ConnectionFactory
+        {
+            HostName = "localhost",
+            UserName = "guest",
+            Password = "guest",
+            RequestedConnectionTimeout = TimeSpan.FromSeconds(5)
+        };
+        using var connection = factory.CreateConnection();
+        return connection.IsOpen;
+    }
+    catch
+    {
+        return false;
+    }
+}
 
 /// <summary>
 /// 运行数据库初始化工具

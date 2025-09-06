@@ -15,6 +15,7 @@ namespace ECommerce.Infrastructure.Data
         public DbSet<Product> Products { get; set; }
         public DbSet<Order> Orders { get; set; }
         public DbSet<OrderItem> OrderItems { get; set; }
+        public DbSet<Address> Addresses { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<OutboxMessage> OutboxMessages { get; set; }
         public DbSet<InventoryTransaction> InventoryTransactions { get; set; }
@@ -68,6 +69,23 @@ namespace ECommerce.Infrastructure.Data
                     .WithMany(e => e.OrderItems)
                     .HasForeignKey(e => e.ProductId)
                     .OnDelete(DeleteBehavior.Restrict);
+            });
+
+            // Address configuration
+            modelBuilder.Entity<Address>(entity =>
+            {
+                entity.HasKey(e => e.Id);
+                entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+                entity.Property(e => e.Phone).IsRequired().HasMaxLength(20);
+                entity.Property(e => e.Province).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.City).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.District).IsRequired().HasMaxLength(200);
+                entity.Property(e => e.Street).IsRequired().HasMaxLength(500);
+                entity.Property(e => e.PostalCode).HasMaxLength(10);
+                entity.HasOne(e => e.User)
+                    .WithMany()
+                    .HasForeignKey(e => e.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
             });
 
             // RefreshToken configuration

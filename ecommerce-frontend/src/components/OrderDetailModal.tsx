@@ -2,6 +2,8 @@ import React from 'react';
 import { Order } from '../interfaces';
 import { X, Package, MapPin, Phone, CreditCard, Calendar, User, Truck } from 'lucide-react';
 import { formatPrice } from '../utils/format';
+import { PaymentService } from '../services/paymentService';
+import { toast } from 'react-hot-toast';
 
 interface OrderDetailModalProps {
   order: Order | null;
@@ -93,6 +95,118 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpen, onCl
         return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  // 处理订单支付
+  const handlePayOrder = async (orderId: string, amount: number) => {
+    try {
+      console.log('Processing payment for order:', orderId, 'amount:', amount);
+      
+      const paymentService = PaymentService.getInstance();
+      const paymentRequest = {
+        orderId: orderId,
+        paymentMethod: 'CreditCard',
+        amount: amount,
+        currency: 'CNY',
+        description: `Order payment for ${orderId}`,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          source: 'frontend'
+        }
+      };
+
+      console.log('Payment request:', paymentRequest);
+      
+      const result = await paymentService.processPayment(paymentRequest);
+      
+      if (result.success) {
+        toast.success('支付成功！订单状态已更新');
+        // 关闭模态框并刷新
+        onClose();
+        // 这里可以触发父组件刷新订单列表
+        window.location.reload();
+      } else {
+        toast.error(`支付失败: ${result.message || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      const errorMessage = error instanceof Error ? error.message : '支付处理失败';
+      toast.error(`支付失败: ${errorMessage}`);
+    }
+  };
+
+  // 处理确认收货
+  const handleConfirmDelivery = async (orderId: string) => {
+    try {
+      console.log('Confirming delivery for order:', orderId);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('请先登录');
+        return;
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://localhost:7037/api'}/orders/${orderId}/confirm-delivery`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '确认收货失败');
+      }
+
+      const result = await response.json();
+      toast.success('确认收货成功！订单已完成');
+      
+      // 关闭模态框并刷新
+      onClose();
+      window.location.reload();
+    } catch (error) {
+      console.error('Confirm delivery error:', error);
+      const errorMessage = error instanceof Error ? error.message : '确认收货失败';
+      toast.error(`确认收货失败: ${errorMessage}`);
+    }
+  };
+
+  // 处理取消订单
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      console.log('Cancelling order:', orderId);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('请先登录');
+        return;
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://localhost:7037/api'}/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '取消订单失败');
+      }
+
+      const result = await response.json();
+      toast.success('订单取消成功！');
+      
+      // 关闭模态框并刷新
+      onClose();
+      window.location.reload();
+    } catch (error) {
+      console.error('Cancel order error:', error);
+      const errorMessage = error instanceof Error ? error.message : '取消订单失败';
+      toast.error(`取消订单失败: ${errorMessage}`);
     }
   };
 
@@ -216,12 +330,18 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpen, onCl
           {/* 订单操作 */}
           <div className="flex justify-end space-x-3 pt-4 border-t">
             {order.status === 'Pending' && (
-              <button className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+              <button 
+                onClick={() => handlePayOrder(order.id, order.totalAmount)}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
                 立即支付
               </button>
             )}
             {order.status === 'Delivered' && (
-              <button className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+              <button 
+                onClick={() => handleConfirmDelivery(order.id)}
+                className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
                 确认收货
               </button>
             )}
@@ -232,7 +352,10 @@ const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpen, onCl
               关闭
             </button>
             {order.status === 'Pending' && (
-              <button className="px-6 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors">
+              <button 
+                onClick={() => handleCancelOrder(order.id)}
+                className="px-6 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+              >
                 取消订单
               </button>
             )}

@@ -4,6 +4,8 @@ import { getOrders } from '../services/orderService';
 import { Order } from '../interfaces';
 import { Calendar, Package, CreditCard, Truck, CheckCircle, XCircle, Clock } from 'lucide-react';
 import OrderDetailModal from '../components/OrderDetailModal';
+import { PaymentService } from '../services/paymentService';
+import { toast } from 'react-hot-toast';
 
 const OrdersPage: React.FC = () => {
   const { isAuthenticated, user } = useAuth();
@@ -56,15 +58,15 @@ const OrdersPage: React.FC = () => {
       if (processedData.length === 0) {
         const mockOrders: Order[] = [
           {
-            id: '1',
+            id: '613457e3-1b59-4afd-8493-1944307171aa',
             orderNumber: 'ORD-001',
-            userId: user?.id || '1',
+            userId: user?.id || '613457e3-1b59-4afd-8493-1944307171aa',
             user: user || {} as any,
             items: [
               {
-                id: '1',
-                orderId: '1',
-                productId: '1',
+                id: '613457e3-1b59-4afd-8493-1944307171bb',
+                orderId: '613457e3-1b59-4afd-8493-1944307171aa',
+                productId: '613457e3-1b59-4afd-8493-1944307171cc',
                 product: {} as any,
                 productName: '测试商品1',
                 productImage: 'https://via.placeholder.com/60x60',
@@ -81,15 +83,15 @@ const OrdersPage: React.FC = () => {
             updatedAt: new Date().toISOString()
           },
           {
-            id: '2',
+            id: '613457e3-1b59-4afd-8493-1944307171dd',
             orderNumber: 'ORD-002',
-            userId: user?.id || '1',
+            userId: user?.id || '613457e3-1b59-4afd-8493-1944307171aa',
             user: user || {} as any,
             items: [
               {
-                id: '2',
-                orderId: '2',
-                productId: '2',
+                id: '613457e3-1b59-4afd-8493-1944307171ee',
+                orderId: '613457e3-1b59-4afd-8493-1944307171dd',
+                productId: '613457e3-1b59-4afd-8493-1944307171ff',
                 product: {} as any,
                 productName: '测试商品2',
                 productImage: 'https://via.placeholder.com/60x60',
@@ -270,6 +272,114 @@ const OrdersPage: React.FC = () => {
       setOrders(mockOrders);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 处理订单支付
+  const handlePayOrder = async (orderId: string, amount: number) => {
+    try {
+      console.log('Processing payment for order:', orderId, 'amount:', amount);
+      
+      const paymentService = PaymentService.getInstance();
+      const paymentRequest = {
+        orderId: orderId,
+        paymentMethod: 'CreditCard',
+        amount: amount,
+        currency: 'CNY',
+        description: `Order payment for ${orderId}`,
+        metadata: {
+          timestamp: new Date().toISOString(),
+          source: 'frontend'
+        }
+      };
+
+      console.log('Payment request:', paymentRequest);
+      
+      const result = await paymentService.processPayment(paymentRequest);
+      
+      if (result.success) {
+        toast.success('支付成功！订单状态已更新');
+        // 重新加载订单列表
+        await loadOrders();
+      } else {
+        toast.error(`支付失败: ${result.message || '未知错误'}`);
+      }
+    } catch (error) {
+      console.error('Payment error:', error);
+      const errorMessage = error instanceof Error ? error.message : '支付处理失败';
+      toast.error(`支付失败: ${errorMessage}`);
+    }
+  };
+
+  // 处理确认收货
+  const handleConfirmDelivery = async (orderId: string) => {
+    try {
+      console.log('Confirming delivery for order:', orderId);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('请先登录');
+        return;
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://localhost:7037/api'}/orders/${orderId}/confirm-delivery`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '确认收货失败');
+      }
+
+      const result = await response.json();
+      toast.success('确认收货成功！订单已完成');
+      
+      // 重新加载订单列表
+      await loadOrders();
+    } catch (error) {
+      console.error('Confirm delivery error:', error);
+      const errorMessage = error instanceof Error ? error.message : '确认收货失败';
+      toast.error(`确认收货失败: ${errorMessage}`);
+    }
+  };
+
+  // 处理取消订单
+  const handleCancelOrder = async (orderId: string) => {
+    try {
+      console.log('Cancelling order:', orderId);
+      
+      const token = localStorage.getItem('token');
+      if (!token) {
+        toast.error('请先登录');
+        return;
+      }
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL || 'https://localhost:7037/api'}/orders/${orderId}/cancel`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || '取消订单失败');
+      }
+
+      const result = await response.json();
+      toast.success('订单取消成功！');
+      
+      // 重新加载订单列表
+      await loadOrders();
+    } catch (error) {
+      console.error('Cancel order error:', error);
+      const errorMessage = error instanceof Error ? error.message : '取消订单失败';
+      toast.error(`取消订单失败: ${errorMessage}`);
     }
   };
 
@@ -538,12 +648,18 @@ const OrdersPage: React.FC = () => {
                 {/* 订单操作按钮 */}
                 <div className="flex justify-end space-x-3 mt-4 pt-4 border-t">
                   {order.status === 'Pending' && (
-                    <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+                    <button 
+                      onClick={() => handlePayOrder(order.id, order.totalAmount)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    >
                       立即支付
                     </button>
                   )}
                   {order.status === 'Delivered' && (
-                    <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
+                    <button 
+                      onClick={() => handleConfirmDelivery(order.id)}
+                      className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                    >
                       确认收货
                     </button>
                   )}
@@ -554,7 +670,10 @@ const OrdersPage: React.FC = () => {
                     查看详情
                   </button>
                   {order.status === 'Pending' && (
-                    <button className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors">
+                    <button 
+                      onClick={() => handleCancelOrder(order.id)}
+                      className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-50 transition-colors"
+                    >
                       取消订单
                     </button>
                   )}

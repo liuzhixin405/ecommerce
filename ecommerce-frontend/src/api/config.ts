@@ -1,5 +1,5 @@
 // API配置
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7037/api';
+export const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7037/api';
 
 export const apiConfig = {
   baseURL: API_BASE_URL,

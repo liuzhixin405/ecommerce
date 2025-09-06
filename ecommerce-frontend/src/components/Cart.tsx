@@ -91,6 +91,7 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
       // Create order DTO
       const orderDto: CreateOrderDto = {
         userId: user?.id,
+        // 不提供 addressId，让后端自动获取默认地址
         customerName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.userName || 'Customer',
         phoneNumber: phoneNumber,
         shippingAddress: address,
@@ -113,7 +114,19 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
       console.error('Order creation error:', error);
-      toast.error(errorMessage);
+      
+      // 检查是否是地址相关的错误
+      if (errorMessage.includes('地址') || errorMessage.includes('Address') || errorMessage.includes('请先设置')) {
+        toast.error('请先设置收货地址，然后重新尝试下单');
+        // 延迟后询问用户是否前往设置地址
+        setTimeout(() => {
+          if (confirm('检测到您还没有设置收货地址，是否前往设置？')) {
+            window.location.href = '/address';
+          }
+        }, 2000);
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsCreatingOrder(false);
     }

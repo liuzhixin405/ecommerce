@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { CreateOrderDto, CreateOrderItemDto } from '../interfaces';
+import { Address } from '../interfaces/Address';
 import { cartService } from '../services/cartService';
 import { createOrder } from '../services/orderService';
 import { formatPrice } from '../utils/format';
+import AddressSelector from './AddressSelector';
 
 interface CheckoutModalProps {
   isOpen: boolean;
@@ -14,15 +16,14 @@ interface CheckoutModalProps {
 
 const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSuccess }) => {
   const { user } = useAuth();
+  const [selectedAddress, setSelectedAddress] = useState<Address | null>(null);
   const [formData, setFormData] = useState({
-    customerName: user?.firstName && user?.lastName ? `${user.firstName} ${user.lastName}` : '',
-    phoneNumber: user?.phoneNumber || '',
-    shippingAddress: user?.address || '',
     paymentMethod: 'CreditCard',
     notes: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showAddressForm, setShowAddressForm] = useState(false);
 
   const cartItems = cartService.getCart();
   const total = cartService.getCartTotal();
@@ -35,12 +36,20 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
     }));
   };
 
+  const handleAddressSelect = (address: Address) => {
+    setSelectedAddress(address);
+  };
+
+  const handleAddNewAddress = () => {
+    setShowAddressForm(true);
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
 
-    if (!formData.customerName || !formData.phoneNumber || !formData.shippingAddress) {
-      setError('请填写所有必填字段');
+    if (!selectedAddress) {
+      setError('请选择一个收货地址');
       return;
     }
 
@@ -52,10 +61,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
     setLoading(true);
     try {
       const orderData: CreateOrderDto = {
-        userId: user?.id,
-        customerName: formData.customerName,
-        phoneNumber: formData.phoneNumber,
-        shippingAddress: formData.shippingAddress,
+        addressId: selectedAddress.id,
+        customerName: selectedAddress.name,
+        phoneNumber: selectedAddress.phone,
+        shippingAddress: selectedAddress.fullAddress,
         paymentMethod: formData.paymentMethod,
         notes: formData.notes,
         items: cartItems.map(item => ({
@@ -75,7 +84,14 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
       onSuccess();
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : '结算失败');
+      const errorMessage = err instanceof Error ? err.message : '结算失败';
+      
+      // 检查是否是地址相关的错误
+      if (errorMessage.includes('地址') || errorMessage.includes('Address') || errorMessage.includes('请先设置')) {
+        setError('请先设置收货地址，点击"添加新地址"按钮进行设置');
+      } else {
+        setError(errorMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -119,49 +135,12 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
           </div>
 
           <div className="space-y-4">
-            <h3 className="font-semibold">客户信息</h3>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                收货人姓名 *
-              </label>
-              <input
-                type="text"
-                name="customerName"
-                value={formData.customerName}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                联系电话 *
-              </label>
-              <input
-                type="tel"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                收货地址 *
-              </label>
-              <textarea
-                name="shippingAddress"
-                value={formData.shippingAddress}
-                onChange={handleInputChange}
-                required
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            </div>
+            <AddressSelector
+              selectedAddressId={selectedAddress?.id}
+              onAddressSelect={handleAddressSelect}
+              onAddNewAddress={handleAddNewAddress}
+              showAddButton={true}
+            />
           </div>
 
           <div>
