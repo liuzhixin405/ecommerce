@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Product } from '../interfaces';
 import { getProducts, searchProducts, getProductsByCategory } from '../services/productService';
 import ProductCard from '../components/ProductCard';
+import ProductDetailModal from '../components/ProductDetailModal';
 import Button from '../components/ui/Button';
 import { Search, Filter } from 'lucide-react';
 
@@ -11,6 +12,8 @@ const ProductList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [categories, setCategories] = useState<string[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
 
   useEffect(() => {
     loadProducts();
@@ -67,8 +70,13 @@ const ProductList: React.FC = () => {
   };
 
   const handleViewDetails = (product: Product) => {
-    // 这里可以导航到产品详情页面
-    console.log('View product details:', product);
+    setSelectedProduct(product);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleCloseDetailModal = () => {
+    setIsDetailModalOpen(false);
+    setSelectedProduct(null);
   };
 
   if (loading) {
@@ -137,6 +145,13 @@ const ProductList: React.FC = () => {
           ))}
         </div>
       )}
+
+      {/* 商品详情模态框 */}
+      <ProductDetailModal
+        product={selectedProduct}
+        isOpen={isDetailModalOpen}
+        onClose={handleCloseDetailModal}
+      />
     </div>
   );
 };
