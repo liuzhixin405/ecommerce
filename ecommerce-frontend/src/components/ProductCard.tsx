@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Product } from '../interfaces';
 import { formatPrice } from '../utils/format';
+import { getFullImageUrl } from '../utils/imageUtils';
 import { cartService } from '../services/cartService';
 import Button from './ui/Button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from './ui/Card';
@@ -46,7 +47,7 @@ const ProductCard: React.FC<ProductCardProps> = ({ product, onViewDetails }) => 
         
         {!imageError && product.imageUrl ? (
           <img
-            src={product.imageUrl}
+            src={getFullImageUrl(product.imageUrl)}
             alt={product.name}
             className={`w-full h-full object-cover hover:scale-105 transition-transform duration-300 ${
               imageLoading ? 'opacity-0' : 'opacity-100'

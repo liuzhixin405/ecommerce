@@ -1,4 +1,5 @@
 import apiClient from '../api/client';
+import { apiConfig } from '../api/config';
 
 export interface UploadResponse {
   success: boolean;
@@ -19,6 +20,17 @@ export interface ImageListResponse {
   images: ImageInfo[];
 }
 
+// 将相对路径转换为完整的URL
+const getFullImageUrl = (relativeUrl: string): string => {
+  if (relativeUrl.startsWith('http')) {
+    return relativeUrl; // 已经是完整URL
+  }
+  
+  // 从API配置中获取基础URL，去掉/api后缀
+  const baseUrl = apiConfig.baseURL.replace('/api', '');
+  return `${baseUrl}${relativeUrl}`;
+};
+
 export const fileUploadService = {
   // 上传产品图片
   uploadProductImage: async (file: File): Promise<UploadResponse> => {
@@ -31,7 +43,10 @@ export const fileUploadService = {
       },
     });
 
-    return response.data;
+    // 将返回的fileUrl转换为完整URL
+    const result = response.data;
+    result.fileUrl = getFullImageUrl(result.fileUrl);
+    return result;
   },
 
   // 删除产品图片
@@ -43,6 +58,14 @@ export const fileUploadService = {
   // 获取所有已上传的图片列表
   getProductImages: async (): Promise<ImageListResponse> => {
     const response = await apiClient.get<ImageListResponse>('/fileupload/product-images');
-    return response.data;
+    
+    // 将每个图片的fileUrl转换为完整URL
+    const result = response.data;
+    result.images = result.images.map(image => ({
+      ...image,
+      fileUrl: getFullImageUrl(image.fileUrl)
+    }));
+    
+    return result;
   }
 };

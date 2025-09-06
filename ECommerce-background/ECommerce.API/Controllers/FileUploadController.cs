@@ -65,11 +65,21 @@ namespace ECommerce.API.Controllers
 
             try
             {
+                // 确保WebRootPath存在
+                if (string.IsNullOrEmpty(_environment.WebRootPath))
+                {
+                    _logger.LogError("WebRootPath is null or empty");
+                    return StatusCode(500, "Server configuration error");
+                }
+
                 // 创建上传目录
                 var uploadPath = Path.Combine(_environment.WebRootPath, UploadFolder, ImageFolder);
+                _logger.LogInformation("Upload path: {UploadPath}", uploadPath);
+                
                 if (!Directory.Exists(uploadPath))
                 {
                     Directory.CreateDirectory(uploadPath);
+                    _logger.LogInformation("Created upload directory: {UploadPath}", uploadPath);
                 }
 
                 // 生成唯一文件名
@@ -85,7 +95,7 @@ namespace ECommerce.API.Controllers
                 // 生成访问URL
                 var fileUrl = $"/{UploadFolder}/{ImageFolder}/{fileName}";
 
-                _logger.LogInformation("Admin {AdminId} uploaded image: {FileName}", CurrentUserId, fileName);
+                _logger.LogInformation("Admin {AdminId} uploaded image: {FileName} to {FilePath}", CurrentUserId, fileName, filePath);
 
                 return Ok(new
                 {
@@ -98,8 +108,8 @@ namespace ECommerce.API.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error uploading image");
-                return StatusCode(500, "Error uploading image");
+                _logger.LogError(ex, "Error uploading image: {Message}", ex.Message);
+                return StatusCode(500, $"Error uploading image: {ex.Message}");
             }
         }
 
@@ -153,10 +163,19 @@ namespace ECommerce.API.Controllers
 
             try
             {
+                // 确保WebRootPath存在
+                if (string.IsNullOrEmpty(_environment.WebRootPath))
+                {
+                    _logger.LogError("WebRootPath is null or empty");
+                    return StatusCode(500, "Server configuration error");
+                }
+
                 var uploadPath = Path.Combine(_environment.WebRootPath, UploadFolder, ImageFolder);
+                _logger.LogInformation("Getting images from path: {UploadPath}", uploadPath);
                 
                 if (!Directory.Exists(uploadPath))
                 {
+                    _logger.LogInformation("Upload directory does not exist: {UploadPath}", uploadPath);
                     return Ok(new { images = new List<object>() });
                 }
 
@@ -177,12 +196,13 @@ namespace ECommerce.API.Controllers
                     .OrderByDescending(img => img.uploadDate)
                     .ToList();
 
+                _logger.LogInformation("Found {Count} images", imageFiles.Count);
                 return Ok(new { images = imageFiles });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error getting image list");
-                return StatusCode(500, "Error getting image list");
+                _logger.LogError(ex, "Error getting image list: {Message}", ex.Message);
+                return StatusCode(500, $"Error getting image list: {ex.Message}");
             }
         }
     }

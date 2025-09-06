@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Product, UpdateProductDto } from '../interfaces';
 import { adminService } from '../services/adminService';
+import { getFullImageUrl } from '../utils/imageUtils';
 import ProductUploadForm from './ProductUploadForm';
 import ImageUpload from './ImageUpload';
 
@@ -309,7 +310,7 @@ const ProductManagement: React.FC = () => {
                         {product.imageUrl ? (
                           <img
                             className="h-full w-full object-cover"
-                            src={product.imageUrl}
+                            src={getFullImageUrl(product.imageUrl)}
                             alt={product.name}
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
