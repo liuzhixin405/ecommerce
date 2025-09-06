@@ -28,7 +28,7 @@ export class PaymentService {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/payments/process`, {
+    const response = await fetch(`${API_BASE_URL}/payment/process`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -51,7 +51,7 @@ export class PaymentService {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/payments/validate/${paymentId}`, {
+    const response = await fetch(`${API_BASE_URL}/payment/validate/${paymentId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -73,7 +73,7 @@ export class PaymentService {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/payments/refund`, {
+    const response = await fetch(`${API_BASE_URL}/payment/refund`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -96,7 +96,7 @@ export class PaymentService {
       throw new Error('Authentication required');
     }
 
-    const response = await fetch(`${API_BASE_URL}/payments/status/${orderId}`, {
+    const response = await fetch(`${API_BASE_URL}/payment/status/${orderId}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -113,7 +113,7 @@ export class PaymentService {
   }
 
   public async getPaymentMethods(): Promise<any[]> {
-    const response = await fetch(`${API_BASE_URL}/payments/methods`, {
+    const response = await fetch(`${API_BASE_URL}/payment/methods`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',

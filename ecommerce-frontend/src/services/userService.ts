@@ -1,7 +1,7 @@
 import { User, CreateUserDto, UpdateUserDto } from '../interfaces/User';
 import authService from './authService';
 
-const API_BASE_URL = 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7037/api';
 
 class UserService {
   private getAuthHeaders(): HeadersInit {

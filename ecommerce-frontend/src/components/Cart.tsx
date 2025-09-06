@@ -30,7 +30,9 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
   const updateCart = () => {
     const items = cartService.getCart();
     setCartItems(items);
-    setTotal(cartService.getCartTotal());
+    const totalAmount = cartService.getCartTotal();
+    setTotal(totalAmount);
+    console.log('Cart updated:', { items, totalAmount });
   };
 
   const handleUpdateQuantity = (productId: string, quantity: number) => {
@@ -49,15 +51,33 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
   };
 
   const handleCheckout = async () => {
+    console.log('=== CHECKOUT BUTTON CLICKED ===');
+    console.log('Checkout clicked, checking conditions...');
+    console.log('isAuthenticated:', isAuthenticated);
+    console.log('cartItems.length:', cartItems.length);
+    console.log('user:', user);
+    console.log('user phoneNumber:', user?.phoneNumber);
+    console.log('user address:', user?.address);
+
     if (!isAuthenticated) {
+      console.log('User not authenticated');
       toast.error('Please login to checkout');
       return;
     }
 
     if (cartItems.length === 0) {
+      console.log('Cart is empty');
       toast.error('Cart is empty');
       return;
     }
+
+    // 检查用户信息是否完整，如果为空则使用默认值
+    const phoneNumber = user?.phoneNumber || '13800000000';
+    const address = user?.address || '北京市朝阳区某某街道123号';
+    
+    console.log('Using user info:', { phoneNumber, address });
+
+    console.log('All checks passed, proceeding with checkout...');
 
     setIsCreatingOrder(true);
     
@@ -71,12 +91,14 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
       // Create order DTO
       const orderDto: CreateOrderDto = {
         customerName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.userName || 'Customer',
-        phoneNumber: user?.phoneNumber || '',
-        shippingAddress: user?.address || '',
+        phoneNumber: phoneNumber,
+        shippingAddress: address,
         paymentMethod: 'CreditCard', // Default payment method
         notes: 'Order from cart',
         items: orderItems
       };
+
+      console.log('Creating order with data:', orderDto);
 
       // Create order
       const order = await orderService.createOrder(orderDto);
@@ -89,6 +111,7 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
       
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to create order';
+      console.error('Order creation error:', error);
       toast.error(errorMessage);
     } finally {
       setIsCreatingOrder(false);
@@ -240,7 +263,7 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
             <PaymentProcessor
               orderId={currentOrderId}
               amount={total}
-              currency="USD"
+              currency="CNY"
               onPaymentSuccess={handlePaymentSuccess}
               onPaymentFailure={handlePaymentFailure}
               onCancel={handlePaymentCancel}
