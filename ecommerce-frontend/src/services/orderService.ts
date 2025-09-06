@@ -1,230 +1,52 @@
-import { Order, CreateOrderDto, PaymentDto, UpdateOrderStatusDto } from '../interfaces/User';
-import authService from './authService';
+import apiClient from '../api/client';
+import { Order, CreateOrderDto } from '../interfaces';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'https://localhost:7037/api';
-
-export class OrderService {
-  private static instance: OrderService;
-
-  private constructor() {}
-
-  public static getInstance(): OrderService {
-    if (!OrderService.instance) {
-      OrderService.instance = new OrderService();
-    }
-    return OrderService.instance;
+export const getOrders = async (): Promise<Order[]> => {
+  try {
+    const response = await apiClient.get<Order[]>('/orders');
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch orders:', error);
+    throw error;
   }
+};
 
-  public async getOrders(): Promise<Order[]> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch orders');
-    }
-
-    return await response.json();
+export const getOrderById = async (id: string): Promise<Order> => {
+  try {
+    const response = await apiClient.get<Order>(`/orders/${id}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch order:', error);
+    throw error;
   }
+};
 
-  public async getAllOrders(): Promise<Order[]> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/all`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch all orders');
-    }
-
-    return await response.json();
+export const createOrder = async (orderData: CreateOrderDto): Promise<Order> => {
+  try {
+    const response = await apiClient.post<Order>('/orders', orderData);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to create order:', error);
+    throw error;
   }
+};
 
-  public async getOrderById(id: string): Promise<Order> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/${id}`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch order');
-    }
-
-    return await response.json();
+export const updateOrderStatus = async (id: string, status: string): Promise<Order> => {
+  try {
+    const response = await apiClient.put<Order>(`/orders/${id}/status`, { status });
+    return response.data;
+  } catch (error) {
+    console.error('Failed to update order status:', error);
+    throw error;
   }
+};
 
-  public async createOrder(orderData: CreateOrderDto): Promise<Order> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(orderData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to create order');
-    }
-
-    return await response.json();
+export const cancelOrder = async (id: string): Promise<Order> => {
+  try {
+    const response = await apiClient.put<Order>(`/orders/${id}/cancel`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to cancel order:', error);
+    throw error;
   }
-
-  public async processPayment(paymentData: PaymentDto): Promise<void> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/payment`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(paymentData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Payment processing failed');
-    }
-  }
-
-  public async cancelOrder(id: string): Promise<void> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/cancel`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to cancel order');
-    }
-  }
-
-  public async shipOrder(id: string, trackingNumber: string): Promise<void> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/ship`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ trackingNumber }),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to ship order');
-    }
-  }
-
-  public async deliverOrder(id: string): Promise<void> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/deliver`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to deliver order');
-    }
-  }
-
-  public async updateOrderStatus(id: string, statusData: UpdateOrderStatusDto): Promise<Order> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/${id}/status`, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(statusData),
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to update order status');
-    }
-
-    return await response.json();
-  }
-
-  public async cancelExpiredOrders(): Promise<void> {
-    const token = authService.getToken();
-    if (!token) {
-      throw new Error('Authentication required');
-    }
-
-    const response = await fetch(`${API_BASE_URL}/orders/cancel-expired`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'Failed to cancel expired orders');
-    }
-  }
-}
-
-export default OrderService.getInstance();
+};

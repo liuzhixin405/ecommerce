@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { CreateOrderDto, CreateOrderItemDto } from '../interfaces/User';
+import { CreateOrderDto, CreateOrderItemDto } from '../interfaces';
 import { cartService } from '../services/cartService';
-import orderService from '../services/orderService';
+import { createOrder } from '../services/orderService';
 import { formatPrice } from '../utils/format';
 
 interface CheckoutModalProps {
@@ -52,6 +52,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
     setLoading(true);
     try {
       const orderData: CreateOrderDto = {
+        userId: user?.id,
         customerName: formData.customerName,
         phoneNumber: formData.phoneNumber,
         shippingAddress: formData.shippingAddress,
@@ -63,14 +64,10 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
         } as CreateOrderItemDto))
       };
 
-      const order = await orderService.createOrder(orderData);
+      const order = await createOrder(orderData);
       
-      // Process payment (simulated)
-      await orderService.processPayment({
-        orderId: order.id,
-        paymentMethod: formData.paymentMethod,
-        amount: order.totalAmount
-      });
+      // Process payment (simulated - this would be handled by payment service)
+      console.log('Processing payment for order:', order.id, 'with method:', formData.paymentMethod);
 
       // Clear cart after successful order
       cartService.clearCart();

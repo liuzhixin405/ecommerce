@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import Navbar from './components/Navbar';
+import HomePage from './pages/HomePage';
 import ProductList from './pages/ProductList';
+import OrdersPage from './pages/OrdersPage';
 import AdminDashboard from './pages/AdminDashboard';
 import Cart from './components/Cart';
 import LoginModal from './components/LoginModal';
@@ -10,10 +12,22 @@ import { AuthProvider, useAuth } from './contexts/AuthContext';
 import './App.css';
 
 function AppContent() {
-  const [currentView, setCurrentView] = useState<'products' | 'cart' | 'users' | 'admin'>('products');
+  const [currentView, setCurrentView] = useState<'home' | 'products' | 'orders' | 'cart' | 'users' | 'admin'>('home');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
+
+  const handleHomeClick = () => {
+    setCurrentView('home');
+  };
+
+  const handleProductsClick = () => {
+    setCurrentView('products');
+  };
+
+  const handleOrdersClick = () => {
+    setCurrentView('orders');
+  };
 
   const handleCartClick = () => {
     setCurrentView('cart');
@@ -43,6 +57,9 @@ function AppContent() {
   return (
     <div className="App">
       <Navbar 
+        onHomeClick={handleHomeClick}
+        onProductsClick={handleProductsClick}
+        onOrdersClick={handleOrdersClick}
         onCartClick={handleCartClick} 
         onLoginClick={handleLoginClick}
         onUsersClick={handleUsersClick}
@@ -51,14 +68,18 @@ function AppContent() {
         user={user}
       />
       <main className="min-h-screen bg-gray-50">
-        {currentView === 'products' ? (
+        {currentView === 'home' ? (
+          <HomePage />
+        ) : currentView === 'products' ? (
           <ProductList />
+        ) : currentView === 'orders' ? (
+          <OrdersPage />
         ) : currentView === 'cart' ? (
           <div className="container mx-auto px-4 py-8">
             <div className="flex items-center justify-between mb-6">
               <h1 className="text-3xl font-bold text-gray-900">购物车</h1>
               <button
-                onClick={() => setCurrentView('products')}
+                onClick={() => setCurrentView('home')}
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 ← 继续购物

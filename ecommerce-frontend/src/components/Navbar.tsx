@@ -9,11 +9,24 @@ interface NavbarProps {
   onLoginClick?: () => void;
   onUsersClick?: () => void;
   onAdminClick?: () => void;
+  onHomeClick?: () => void;
+  onProductsClick?: () => void;
+  onOrdersClick?: () => void;
   isAuthenticated?: boolean;
   user?: UserType | null;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ onCartClick, onLoginClick, onUsersClick, onAdminClick, isAuthenticated, user }) => {
+const Navbar: React.FC<NavbarProps> = ({ 
+  onCartClick, 
+  onLoginClick, 
+  onUsersClick, 
+  onAdminClick, 
+  onHomeClick, 
+  onProductsClick, 
+  onOrdersClick, 
+  isAuthenticated, 
+  user 
+}) => {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -39,15 +52,26 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onLoginClick, onUsersClick
             
             {/* 桌面端导航 */}
             <div className="hidden md:ml-6 md:flex md:space-x-8">
-              <a href="/" className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+              <button 
+                onClick={onHomeClick}
+                className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              >
                 首页
-              </a>
-              <a href="/products" className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
+              </button>
+              <button 
+                onClick={onProductsClick}
+                className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+              >
                 产品
-              </a>
-              <a href="/orders" className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium">
-                订单
-              </a>
+              </button>
+              {isAuthenticated && (
+                <button 
+                  onClick={onOrdersClick}
+                  className="text-gray-900 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  订单
+                </button>
+              )}
             </div>
           </div>
 
@@ -128,27 +152,35 @@ const Navbar: React.FC<NavbarProps> = ({ onCartClick, onLoginClick, onUsersClick
       {isMobileMenuOpen && (
         <div className="md:hidden">
           <div className="px-2 pt-2 pb-3 space-y-1 sm:px-3 bg-white border-t">
-            <a
-              href="/"
-              className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => setIsMobileMenuOpen(false)}
+            <button
+              onClick={() => {
+                onHomeClick?.();
+                setIsMobileMenuOpen(false);
+              }}
+              className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
             >
               首页
-            </a>
-            <a
-              href="/products"
-              className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => setIsMobileMenuOpen(false)}
+            </button>
+            <button
+              onClick={() => {
+                onProductsClick?.();
+                setIsMobileMenuOpen(false);
+              }}
+              className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
             >
               产品
-            </a>
-            <a
-              href="/orders"
-              className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium"
-              onClick={() => setIsMobileMenuOpen(false)}
-            >
-              订单
-            </a>
+            </button>
+            {isAuthenticated && (
+              <button
+                onClick={() => {
+                  onOrdersClick?.();
+                  setIsMobileMenuOpen(false);
+                }}
+                className="text-gray-900 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left"
+              >
+                订单
+              </button>
+            )}
           </div>
         </div>
       )}

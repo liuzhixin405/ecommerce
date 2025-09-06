@@ -8,8 +8,8 @@ import { Trash2, Minus, Plus, ShoppingCart, CreditCard } from 'lucide-react';
 import PaymentProcessor from './PaymentProcessor';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import orderService from '../services/orderService';
-import { CreateOrderDto, CreateOrderItemDto } from '../interfaces/User';
+import { createOrder } from '../services/orderService';
+import { CreateOrderDto, CreateOrderItemDto } from '../interfaces';
 
 interface CartProps {
   onCheckout?: () => void;
@@ -90,6 +90,7 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
 
       // Create order DTO
       const orderDto: CreateOrderDto = {
+        userId: user?.id,
         customerName: `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || user?.userName || 'Customer',
         phoneNumber: phoneNumber,
         shippingAddress: address,
@@ -101,7 +102,7 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
       console.log('Creating order with data:', orderDto);
 
       // Create order
-      const order = await orderService.createOrder(orderDto);
+      const order = await createOrder(orderDto);
       
       // Store order ID and show payment processor
       setCurrentOrderId(order.id);

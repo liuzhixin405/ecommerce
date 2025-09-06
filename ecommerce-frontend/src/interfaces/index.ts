@@ -29,17 +29,20 @@ export interface OrderItem {
   orderId: string;
   productId: string;
   product: Product;
+  productName: string;
+  productImage?: string;
   quantity: number;
   price: number;
 }
 
 export interface Order {
   id: string;
+  orderNumber: string;
   userId: string;
   user: User;
   items: OrderItem[];
   totalAmount: number;
-  status: 'Pending' | 'Confirmed' | 'Shipped' | 'Delivered' | 'Cancelled';
+  status: 'Pending' | 'Paid' | 'Shipped' | 'Delivered' | 'Cancelled';
   shippingAddress: string;
   shippingPhone: string;
   shippingName: string;
@@ -56,15 +59,19 @@ export interface CreateProductDto {
   imageUrl: string;
 }
 
+export interface CreateOrderItemDto {
+  productId: string;
+  quantity: number;
+}
+
 export interface CreateOrderDto {
-  userId: string;
-  items: {
-    productId: string;
-    quantity: number;
-  }[];
+  userId?: string;
+  customerName: string;
+  phoneNumber: string;
   shippingAddress: string;
-  shippingPhone: string;
-  shippingName: string;
+  paymentMethod: string;
+  notes?: string;
+  items: CreateOrderItemDto[];
 }
 
 export interface UpdateOrderStatusDto {
