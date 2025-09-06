@@ -12,52 +12,85 @@ interface OrderDetailModalProps {
 const OrderDetailModal: React.FC<OrderDetailModalProps> = ({ order, isOpen, onClose }) => {
   if (!order) return null;
 
-  const getStatusIcon = (status: string) => {
+  // 订单状态映射函数
+  const mapOrderStatus = (status: number | string): string => {
+    if (typeof status === 'string') {
+      return status;
+    }
+    
     switch (status) {
+      case 0: return 'Pending';
+      case 1: return 'Paid';
+      case 2: return 'Confirmed';
+      case 3: return 'Shipped';
+      case 4: return 'Delivered';
+      case 5: return 'Cancelled';
+      case 6: return 'Refunded';
+      default: return 'Unknown';
+    }
+  };
+
+  const getStatusIcon = (status: string | number) => {
+    const statusStr = typeof status === 'number' ? mapOrderStatus(status) : status;
+    switch (statusStr) {
       case 'Pending':
         return <Calendar className="w-5 h-5 text-yellow-500" />;
       case 'Paid':
         return <CreditCard className="w-5 h-5 text-green-500" />;
+      case 'Confirmed':
+        return <CreditCard className="w-5 h-5 text-blue-500" />;
       case 'Shipped':
         return <Truck className="w-5 h-5 text-blue-500" />;
       case 'Delivered':
         return <Package className="w-5 h-5 text-green-600" />;
       case 'Cancelled':
         return <X className="w-5 h-5 text-red-500" />;
+      case 'Refunded':
+        return <X className="w-5 h-5 text-orange-500" />;
       default:
         return <Calendar className="w-5 h-5 text-gray-500" />;
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
+  const getStatusText = (status: string | number) => {
+    const statusStr = typeof status === 'number' ? mapOrderStatus(status) : status;
+    switch (statusStr) {
       case 'Pending':
         return '待支付';
       case 'Paid':
         return '已支付';
+      case 'Confirmed':
+        return '已确认';
       case 'Shipped':
         return '已发货';
       case 'Delivered':
         return '已送达';
       case 'Cancelled':
         return '已取消';
+      case 'Refunded':
+        return '已退款';
       default:
-        return status;
+        return statusStr;
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
+  const getStatusColor = (status: string | number) => {
+    const statusStr = typeof status === 'number' ? mapOrderStatus(status) : status;
+    switch (statusStr) {
       case 'Pending':
         return 'bg-yellow-100 text-yellow-800';
       case 'Paid':
         return 'bg-green-100 text-green-800';
+      case 'Confirmed':
+        return 'bg-blue-100 text-blue-800';
       case 'Shipped':
         return 'bg-blue-100 text-blue-800';
       case 'Delivered':
         return 'bg-green-100 text-green-800';
       case 'Cancelled':
         return 'bg-red-100 text-red-800';
+      case 'Refunded':
+        return 'bg-orange-100 text-orange-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }

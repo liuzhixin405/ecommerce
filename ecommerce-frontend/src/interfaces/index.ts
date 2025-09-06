@@ -42,7 +42,7 @@ export interface Order {
   user: User;
   items: OrderItem[];
   totalAmount: number;
-  status: 'Pending' | 'Paid' | 'Shipped' | 'Delivered' | 'Cancelled';
+  status: string;
   shippingAddress: string;
   shippingPhone: string;
   shippingName: string;
