@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { CreateOrderDto, CreateOrderItemDto } from '../interfaces';
 import { Address } from '../interfaces/Address';
 import { cartService } from '../services/cartService';
-import { createOrder } from '../services/orderService';
+import { createOrder, validateAddress } from '../services/orderService';
 import { formatPrice } from '../utils/format';
 import AddressSelector from './AddressSelector';
 
@@ -72,6 +72,19 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({ isOpen, onClose, onSucces
           quantity: item.quantity
         } as CreateOrderItemDto))
       };
+
+      // 先验证地址
+      const addressValidation = await validateAddress(orderData);
+      
+      if (!addressValidation.isValid) {
+        if (addressValidation.requiresAddressManagement) {
+          setError('请先设置收货地址');
+          window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'addresses' }));
+        } else {
+          setError(addressValidation.message);
+        }
+        return;
+      }
 
       const order = await createOrder(orderData);
       

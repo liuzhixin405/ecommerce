@@ -17,6 +17,23 @@ function AppContent() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
+  // 监听全局导航事件，统一内部视图切换
+  React.useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent<string>).detail;
+      if (detail === 'addresses') {
+        setCurrentView('addresses');
+      } else if (detail === 'cart') {
+        setCurrentView('cart');
+      } else if (detail === 'orders') {
+        setCurrentView('orders');
+      } else if (detail === 'home') {
+        setCurrentView('home');
+      }
+    };
+    window.addEventListener('app:navigate', handler as EventListener);
+    return () => window.removeEventListener('app:navigate', handler as EventListener);
+  }, []);
 
   const handleHomeClick = () => {
     setCurrentView('home');

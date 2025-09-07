@@ -8,7 +8,7 @@ import { Trash2, Minus, Plus, ShoppingCart, CreditCard } from 'lucide-react';
 import PaymentProcessor from './PaymentProcessor';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { createOrder } from '../services/orderService';
+import { createOrder, validateAddress } from '../services/orderService';
 import { CreateOrderDto, CreateOrderItemDto } from '../interfaces';
 
 interface CartProps {
@@ -100,7 +100,22 @@ const Cart: React.FC<CartProps> = ({ onCheckout }) => {
         items: orderItems
       };
 
-      console.log('Creating order with data:', orderDto);
+      console.log('Validating address with data:', orderDto);
+
+      // 先验证地址
+      const addressValidation = await validateAddress(orderDto);
+      
+      if (!addressValidation.isValid) {
+        if (addressValidation.requiresAddressManagement) {
+          toast.error(addressValidation.message || '请先设置收货地址');
+          window.dispatchEvent(new CustomEvent('app:navigate', { detail: 'addresses' }));
+        } else {
+          toast.error(addressValidation.message);
+        }
+        return;
+      }
+
+      console.log('Address validation passed, creating order...');
 
       // Create order
       const order = await createOrder(orderDto);
