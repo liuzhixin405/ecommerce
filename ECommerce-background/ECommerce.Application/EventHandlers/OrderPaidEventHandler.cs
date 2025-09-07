@@ -72,10 +72,16 @@ namespace ECommerce.Application.EventHandlers
             await _cacheService.RemoveByPatternAsync($"order:{domainEvent.OrderId}");
             await _cacheService.RemoveByPatternAsync($"orders:user:{domainEvent.UserId}");
 
-            // 4) 发送发货消息（延迟5秒后发货）
-            await Task.Delay(5000, cancellationToken);
-            await _messagePublisher.PublishShipmentMessageAsync(domainEvent.OrderId, domainEvent.UserId);
-            _logger.LogInformation("OrderPaidEventHandler: Sent shipment message for order {OrderId}", domainEvent.OrderId);
+            // 4) 发送发货消息（去掉延迟，立即触发）
+            try
+            {
+                await _messagePublisher.PublishShipmentMessageAsync(domainEvent.OrderId, domainEvent.UserId);
+                _logger.LogInformation("OrderPaidEventHandler: Sent shipment message for order {OrderId}", domainEvent.OrderId);
+            }
+            catch (Exception publishEx)
+            {
+                _logger.LogError(publishEx, "OrderPaidEventHandler: Failed to publish shipment message for order {OrderId}", domainEvent.OrderId);
+            }
         }
     }
 }

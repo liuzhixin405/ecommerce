@@ -345,6 +345,41 @@ namespace ECommerce.Application.Services
             return true;
         }
 
+        // 网关已成功后，仅进行订单侧确认与事件发布
+        public async Task<bool> FinalizePaymentAsync(Guid orderId, string paymentMethod, decimal amount, string paymentId)
+        {
+            var order = await _orderRepository.GetByIdAsync(orderId);
+            if (order == null)
+                return false;
+
+            if (order.Status != OrderStatus.Pending)
+                return false;
+
+            if (amount != order.TotalAmount)
+                return false;
+
+            order.Status = OrderStatus.Paid;
+            order.PaidAt = DateTime.UtcNow;
+            order.PaymentMethod = paymentMethod;
+
+            await DeductOrderStock(order);
+            await _orderRepository.UpdateAsync(order);
+            _logger.LogInformation("Finalized payment for order: {OrderId}, PaymentId: {PaymentId}", orderId, paymentId);
+
+            try
+            {
+                await _eventBus.PublishAsync(new OrderPaidEvent(order.Id, order.UserId, paymentId, amount, paymentMethod));
+                await _eventBus.PublishAsync(new PaymentSucceededEvent(paymentId, order.Id, order.UserId, amount, paymentMethod));
+                await _eventBus.PublishAsync(new PaymentProcessedEvent(paymentId, order.Id, order.UserId, amount, paymentMethod, true));
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to publish payment events for order {OrderId}", order.Id);
+            }
+
+            return true;
+        }
+
         public async Task<bool> ShipOrderAsync(Guid id, string trackingNumber)
         {
             var order = await _orderRepository.GetByIdAsync(id);

@@ -10,11 +10,13 @@ namespace ECommerce.API.Controllers
     public class PaymentController : BaseController
     {
         private readonly IPaymentService _paymentService;
+        private readonly IOrderService _orderService;
         private readonly ILogger<PaymentController> _logger;
 
-        public PaymentController(IPaymentService paymentService, ILogger<PaymentController> logger)
+        public PaymentController(IPaymentService paymentService, IOrderService orderService, ILogger<PaymentController> logger)
         {
             _paymentService = paymentService;
+            _orderService = orderService;
             _logger = logger;
         }
 
@@ -26,17 +28,55 @@ namespace ECommerce.API.Controllers
         {
             try
             {
+                if (!ModelState.IsValid)
+                {
+                    return BadRequest(ModelState);
+                }
+
+                if (CurrentUserId == null)
+                {
+                    return BadRequest("Invalid user");
+                }
+
+                if (paymentRequest.Amount <= 0)
+                {
+                    return BadRequest(new { message = "Invalid amount" });
+                }
+
                 _logger.LogInformation("Processing payment for order: {OrderId}", paymentRequest.OrderId);
 
                 var result = await _paymentService.ProcessPaymentAsync(paymentRequest);
 
                 if (result.Success)
                 {
-                    return Ok(result);
+                    // 同步订单支付流程：更新订单状态并发布事件
+                    // 避免再次调用网关，直接订单侧最终确认
+                    var orderPaymentOk = await _orderService.FinalizePaymentAsync(
+                        paymentRequest.OrderId,
+                        paymentRequest.PaymentMethod,
+                        paymentRequest.Amount,
+                        result.PaymentId ?? string.Empty);
+
+                    if (!orderPaymentOk)
+                    {
+                        _logger.LogWarning("Order payment finalize failed for order: {OrderId}", paymentRequest.OrderId);
+                        return BadRequest(new { message = "Order payment processing failed" });
+                    }
+
+                    return Ok(new
+                    {
+                        success = true,
+                        message = "Payment processed successfully",
+                        paymentId = result.PaymentId,
+                        transactionId = result.TransactionId,
+                        status = result.Status,
+                        processedAt = result.ProcessedAt,
+                        additionalData = result.AdditionalData
+                    });
                 }
                 else
                 {
-                    return BadRequest(new { message = result.Message, details = result });
+                    return BadRequest(new { message = result.Message });
                 }
             }
             catch (Exception ex)

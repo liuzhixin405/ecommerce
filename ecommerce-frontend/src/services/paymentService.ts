@@ -28,6 +28,7 @@ export class PaymentService {
       throw new Error('Authentication required');
     }
 
+    // 改回 PaymentController 统一入口
     const response = await fetch(`${API_BASE_URL}/payment/process`, {
       method: 'POST',
       headers: {

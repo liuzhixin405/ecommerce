@@ -23,32 +23,41 @@ namespace ECommerce.Infrastructure.Services
 
         public Task PublishShipmentMessageAsync(Guid orderId, Guid userId)
         {
-            var factory = new ConnectionFactory()
+            try
             {
-                HostName = _rabbitHost,
-                UserName = _rabbitUser,
-                Password = _rabbitPass,
-                DispatchConsumersAsync = true
-            };
+                var factory = new ConnectionFactory()
+                {
+                    HostName = _rabbitHost,
+                    UserName = _rabbitUser,
+                    Password = _rabbitPass,
+                    DispatchConsumersAsync = true
+                };
 
-            using var connection = factory.CreateConnection();
-            using var channel = connection.CreateModel();
+                using var connection = factory.CreateConnection();
+                using var channel = connection.CreateModel();
 
-            // 确保队列存在
-            channel.QueueDeclare(queue: ShipmentQueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
+                // 确保队列存在
+                channel.QueueDeclare(queue: ShipmentQueueName, durable: true, exclusive: false, autoDelete: false, arguments: null);
 
-            var shipmentData = new OrderShipmentData
+                var shipmentData = new OrderShipmentData
+                {
+                    OrderId = orderId,
+                    UserId = userId,
+                    RequestedAt = DateTime.UtcNow
+                };
+
+                var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shipmentData));
+                var properties = channel.CreateBasicProperties();
+                properties.Persistent = true;
+
+                channel.BasicPublish(exchange: "", routingKey: ShipmentQueueName, basicProperties: properties, body: body);
+            }
+            catch (Exception ex)
             {
-                OrderId = orderId,
-                UserId = userId,
-                RequestedAt = DateTime.UtcNow
-            };
-
-            var body = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(shipmentData));
-            var properties = channel.CreateBasicProperties();
-            properties.Persistent = true;
-
-            channel.BasicPublish(exchange: "", routingKey: ShipmentQueueName, basicProperties: properties, body: body);
+                // 用 Console 输出兜底日志（发布端无 ILogger 注入）
+                Console.WriteLine($"Error publishing shipment message: {ex.Message}");
+                // 不中断主流程
+            }
 
             return Task.CompletedTask;
         }

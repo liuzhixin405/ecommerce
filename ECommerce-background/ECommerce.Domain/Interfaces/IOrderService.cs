@@ -11,6 +11,8 @@ namespace ECommerce.Domain.Interfaces
         Task<OrderDto> UpdateOrderStatusAsync(Guid id, UpdateOrderStatusDto updateOrderStatusDto);
         Task<bool> CancelOrderAsync(Guid id);
         Task<bool> ProcessPaymentAsync(PaymentDto paymentDto);
+        // 在支付网关已成功后仅做订单侧的确认与事件发布（不再调用支付网关）
+        Task<bool> FinalizePaymentAsync(Guid orderId, string paymentMethod, decimal amount, string paymentId);
         Task<bool> ShipOrderAsync(Guid id, string trackingNumber);
         Task<bool> DeliverOrderAsync(Guid id);
         Task<bool> CompleteOrderAsync(Guid id);

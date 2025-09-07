@@ -216,6 +216,83 @@ namespace ECommerce.API.Controllers
 
             return Ok(operationTypes);
         }
+
+        // --------------- Inventory Transactions (moved from InventoryTransactionsController) ---------------
+
+        /// <summary>
+        /// 获取指定产品的库存事务记录
+        /// </summary>
+        [HttpGet("transactions/product/{productId}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<InventoryTransaction>>> GetTransactionsByProduct(Guid productId, [FromQuery] int limit = 50)
+        {
+            try
+            {
+                if (limit <= 0 || limit > 1000)
+                {
+                    return BadRequest("Limit must be between 1 and 1000");
+                }
+
+                var transactions = await _inventoryService.GetProductInventoryTransactionsAsync(productId, limit);
+                return Ok(transactions);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting inventory transactions for product {ProductId}", productId);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// 获取库存事务记录详情
+        /// </summary>
+        [HttpGet("transactions/{id}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<InventoryTransaction>> GetTransactionById(Guid id)
+        {
+            try
+            {
+                var transaction = await _inventoryService.GetInventoryTransactionAsync(id);
+                if (transaction == null)
+                    return NotFound();
+
+                return Ok(transaction);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting inventory transaction {TransactionId}", id);
+                return StatusCode(500, "Internal server error");
+            }
+        }
+
+        /// <summary>
+        /// 根据操作类型获取库存事务记录（仓储未实现，暂返回空集合）
+        /// </summary>
+        [HttpGet("transactions/operation/{operationType}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<ActionResult<IEnumerable<InventoryTransaction>>> GetTransactionsByOperation(string operationType, [FromQuery] int limit = 50)
+        {
+            try
+            {
+                if (limit <= 0 || limit > 1000)
+                {
+                    return BadRequest("Limit must be between 1 and 1000");
+                }
+
+                if (!Enum.TryParse<InventoryOperationType>(operationType, out var parsedOperationType))
+                {
+                    return BadRequest($"Invalid operation type: {operationType}");
+                }
+
+                await Task.CompletedTask;
+                return Ok(new List<InventoryTransaction>());
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error getting inventory transactions for operation type {OperationType}", operationType);
+                return StatusCode(500, "Internal server error");
+            }
+        }
     }
 
     /// <summary>

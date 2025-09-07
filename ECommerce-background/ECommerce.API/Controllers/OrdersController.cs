@@ -69,28 +69,7 @@ namespace ECommerce.API.Controllers
             return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
         }
 
-        [HttpPost("payment")]
-        public async Task<ActionResult> ProcessPayment(PaymentDto paymentDto)
-        {
-            // 模型验证
-            if (!ModelState.IsValid)
-            {
-                return BadRequest(ModelState);
-            }
-
-            try
-            {
-                var result = await _orderService.ProcessPaymentAsync(paymentDto);
-                if (!result)
-                    return BadRequest("Payment processing failed");
-
-                return Ok(new { message = "Payment processed successfully" });
-            }
-            catch (Exception)
-            {
-                return StatusCode(500, "Internal server error");
-            }
-        }
+        // 清理：支付走 PaymentController，不再提供订单内支付端点
 
         [HttpPut("{id}/cancel")]
         public async Task<ActionResult> CancelOrder(Guid id)
